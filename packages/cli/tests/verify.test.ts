@@ -156,7 +156,7 @@ describe("verifyBundle — happy path", () => {
   test("summarize() reports score + sessions + created_at date", () => {
     const out = summarize(fixturePayload());
     expect(out).toContain("score 35/100");
-    expect(out).toContain("30 sessões");
+    expect(out).toContain("30 sessions");
     expect(out).toContain("2026-05-14"); // from payload.created_at
   });
 });
@@ -442,8 +442,8 @@ describe("verifyBundle — L1 / L2 sections (F6.8)", () => {
     const result = await verifyBundle(bundle);
     expect(result.ok).toBe(true);
     expect(result.checks.l1_section.ok).toBe(false);
-    // R1.1 — warning message says "Seção core ausente" (was "Seção L1 ausente").
-    expect(result.warnings.some((w) => w.includes("core ausente"))).toBe(true);
+    // R1.1 — warning message says "core section missing" (was "L1 section missing").
+    expect(result.warnings.some((w) => w.includes("core section missing"))).toBe(true);
     // L2 still parses via the legacy `signals` key.
     expect(result.checks.l2_section.ok).toBe(true);
     expect(result.checks.l2_section.session_count).toBe(30);
@@ -488,7 +488,7 @@ describe("verifyBundle — L1 / L2 sections (F6.8)", () => {
     const out = logs.join("\n").replace(/\x1b\[[0-9;]*m/g, "");
     // R1.1 — surface label is now "core" (was "L1") and reason mentions core.
     expect(out).toContain("⚠ core");
-    expect(out).toContain("Seção core ausente");
+    expect(out).toContain("core section missing");
   });
 });
 
@@ -689,9 +689,9 @@ describe("manifest matches the on-disk fixtures", () => {
   });
 });
 
-// NOTA: testes E2E do verifyCommand não estão aqui porque o comando tem
-// process.exit nos paths de erro, o que mata o runner. A função pura
-// summarizeManifest é coberta pelos 6 testes acima + 3 fixture-load tests.
-// O wiring do print de manifest é mecânico (3 console.log lines em
-// commands/verify.ts) e validado por inspeção manual rodando
+// NOTE: E2E tests of verifyCommand are not here because the command calls
+// process.exit on error paths, which kills the runner. The pure function
+// summarizeManifest is covered by the 6 tests above + 3 fixture-load tests.
+// The manifest print wiring is mechanical (3 console.log lines in
+// commands/verify.ts) and validated by manual inspection running
 // `beheld verify <fixture>.beheld`.

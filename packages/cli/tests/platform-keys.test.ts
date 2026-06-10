@@ -7,11 +7,11 @@ import {
 } from "../src/keys/platform-keys";
 
 describe("embedded platform keys", () => {
-  test("ao menos uma chave está embarcada", () => {
+  test("at least one key is embedded", () => {
     expect(EMBEDDED_PLATFORM_KEYS.length).toBeGreaterThan(0);
   });
 
-  test("toda chave tem os campos requeridos com tipos corretos", () => {
+  test("every key has the required fields with correct types", () => {
     for (const key of EMBEDDED_PLATFORM_KEYS) {
       expect(key.key_id).toMatch(/^beheld-platform-\d{4}-q[1-4]$/);
       expect(key.algorithm).toBe("ed25519");
@@ -22,27 +22,27 @@ describe("embedded platform keys", () => {
     }
   });
 
-  test("source aponta pro caminho canônico no repo web", () => {
+  test("source points to the canonical path in the web repo", () => {
     expect(EMBEDDED_KEYS_SOURCE).toBe("web/source/backend/keys/platform");
   });
 
-  test("findPlatformKey retorna a chave correspondente", () => {
+  test("findPlatformKey returns the matching key", () => {
     const first = EMBEDDED_PLATFORM_KEYS[0]!;
     expect(findPlatformKey(first.key_id)).toEqual(first);
   });
 
-  test("findPlatformKey retorna undefined para id desconhecido", () => {
+  test("findPlatformKey returns undefined for unknown id", () => {
     expect(findPlatformKey("beheld-platform-9999-q9")).toBeUndefined();
   });
 
-  test("activePlatformKeys filtra inativas e revogadas", () => {
+  test("activePlatformKeys filters out inactive and revoked", () => {
     for (const k of activePlatformKeys()) {
       expect(k.active).toBe(true);
       expect(k.revoked).toBe(false);
     }
   });
 
-  test("ao menos uma chave ativa está presente (sanity)", () => {
+  test("at least one active key is present (sanity)", () => {
     expect(activePlatformKeys().length).toBeGreaterThanOrEqual(1);
   });
 });

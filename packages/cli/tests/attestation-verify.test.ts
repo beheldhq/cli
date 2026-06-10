@@ -157,7 +157,7 @@ async function buildSignedBundle(
 // ── tests ─────────────────────────────────────────────────────────────────────
 
 describe("verifyAttestation", () => {
-  test("retorna present=false quando bundle não tem attestation", async () => {
+  test("returns present=false when bundle has no attestation", async () => {
     const bundle: Bundle = {
       version: "3",
       payload: fixturePayload(),
@@ -170,7 +170,7 @@ describe("verifyAttestation", () => {
     expect(result.signature_valid).toBe(false);
   });
 
-  test("attestation legítima → present + payload_valid + signature_valid + key_status=active + dev_pubkey_matches", async () => {
+  test("legitimate attestation → present + payload_valid + signature_valid + key_status=active + dev_pubkey_matches", async () => {
     const k = await makeTestPlatformKey();
     const emb = embedded(k);
     const bundle = await buildSignedBundle(k, emb);
@@ -185,7 +185,7 @@ describe("verifyAttestation", () => {
     expect(result.platform_key_id).toBe("test-platform-key");
   });
 
-  test("signature_valid=false quando payload foi adulterado pós-assinatura", async () => {
+  test("signature_valid=false when payload was tampered after signing", async () => {
     const k = await makeTestPlatformKey();
     const emb = embedded(k);
     const bundle = await buildSignedBundle(k, emb, { tamperPayload: true });
@@ -196,7 +196,7 @@ describe("verifyAttestation", () => {
     expect(result.reason).toContain("does not match");
   });
 
-  test("dev_pubkey_matches=false quando attestation referencia outro dev_pubkey", async () => {
+  test("dev_pubkey_matches=false when attestation references a different dev_pubkey", async () => {
     const k = await makeTestPlatformKey();
     const emb = embedded(k);
     const bundle = await buildSignedBundle(k, emb, { mismatchedDevPubkey: true });
@@ -206,7 +206,7 @@ describe("verifyAttestation", () => {
     expect(result.dev_pubkey_matches).toBe(false);
   });
 
-  test("key_status=unknown quando platform_key_id não está nas embedded keys", async () => {
+  test("key_status=unknown when platform_key_id is not in embedded keys", async () => {
     const k = await makeTestPlatformKey();
     const emb = embedded(k);
     const bundle = await buildSignedBundle(k, emb);
@@ -219,7 +219,7 @@ describe("verifyAttestation", () => {
     expect(result.reason).toContain("not in embedded keys");
   });
 
-  test("key_status=rotated quando chave está active=false sem revoked", async () => {
+  test("key_status=rotated when key is active=false without revoked", async () => {
     const k = await makeTestPlatformKey();
     const emb = embedded(k, { active: false, revoked: false });
     const bundle = await buildSignedBundle(k, emb);
@@ -229,7 +229,7 @@ describe("verifyAttestation", () => {
     expect(result.key_status).toBe("rotated");
   });
 
-  test("key_status=revoked + revoked_reason quando chave está revoked=true", async () => {
+  test("key_status=revoked + revoked_reason when key is revoked=true", async () => {
     const k = await makeTestPlatformKey();
     const emb = embedded(k, {
       active: false,
@@ -244,7 +244,7 @@ describe("verifyAttestation", () => {
     expect(result.revoked_reason).toBe("exposed in CI log");
   });
 
-  test("payload_valid=false quando type não é o esperado", async () => {
+  test("payload_valid=false when type is not the expected one", async () => {
     const k = await makeTestPlatformKey();
     const emb = embedded(k);
     const bundle = await buildSignedBundle(k, emb);
@@ -255,7 +255,7 @@ describe("verifyAttestation", () => {
     expect(result.reason).toContain("unsupported");
   });
 
-  test("payload_valid=false quando github não tem login", async () => {
+  test("payload_valid=false when github has no login", async () => {
     const k = await makeTestPlatformKey();
     const emb = embedded(k);
     const bundle = await buildSignedBundle(k, emb);
@@ -267,7 +267,7 @@ describe("verifyAttestation", () => {
     expect(result.reason).toContain("login");
   });
 
-  test("payload_valid=false quando signature está malformada", async () => {
+  test("payload_valid=false when signature is malformed", async () => {
     const k = await makeTestPlatformKey();
     const emb = embedded(k);
     const bundle = await buildSignedBundle(k, emb);

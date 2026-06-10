@@ -29,12 +29,12 @@ afterEach(() => {
 // ── isFirstInstall ───────────────────────────────────────────────────────────
 
 describe("isFirstInstall", () => {
-  test("true quando install-id ausente", async () => {
+  test("true when install-id missing", async () => {
     const { isFirstInstall } = await import("../../src/install/counter");
     expect(isFirstInstall()).toBe(true);
   });
 
-  test("false quando install-id presente", async () => {
+  test("false when install-id present", async () => {
     fs.writeFileSync(path.join(tmpDir, ".beheld", "install-id"), "some-uuid");
     const { isFirstInstall } = await import("../../src/install/counter");
     expect(isFirstInstall()).toBe(false);
@@ -68,7 +68,7 @@ describe("isOptedOut", () => {
 // ── getRegisterPayload ───────────────────────────────────────────────────────
 
 describe("getRegisterPayload", () => {
-  test("retorna payload válido com id v4, os, version", async () => {
+  test("returns valid payload with id v4, os, version", async () => {
     const { getRegisterPayload, getOsTag } = await import("../../src/install/counter");
     const osTag = getOsTag();
     if (osTag === null) return; // skip on unsupported platforms
@@ -98,7 +98,7 @@ describe("registerFirstInstall", () => {
     version: "0.3.2",
   };
 
-  test("grava install-id MESMO quando POST falha", async () => {
+  test("writes install-id EVEN when POST fails", async () => {
     const { registerFirstInstall, installIdPath } = await import(
       "../../src/install/counter"
     );
@@ -111,7 +111,7 @@ describe("registerFirstInstall", () => {
     expect(fs.readFileSync(installIdPath(), "utf8")).toBe(validPayload.id);
   });
 
-  test("grava install-id quando POST retorna 5xx", async () => {
+  test("writes install-id when POST returns 5xx", async () => {
     const { registerFirstInstall, installIdPath } = await import(
       "../../src/install/counter"
     );
@@ -226,16 +226,16 @@ describe("getApiBase / registerUrl", () => {
   });
 });
 
-// ── invariants de privacidade ────────────────────────────────────────────────
+// ── privacy invariants ───────────────────────────────────────────────────────
 
-describe("privacy invariants (cláusula pétrea)", () => {
-  test("source do counter.ts não referencia process.env além do BEHELD_*", async () => {
+describe("privacy invariants (immutable clause)", () => {
+  test("counter.ts source references no process.env beyond BEHELD_*", async () => {
     const src = fs.readFileSync(
       path.join(__dirname, "..", "..", "src", "install", "counter.ts"),
       "utf8",
     );
-    // Permitido: process.env.BEHELD_DATA_DIR e BEHELD_NO_TELEMETRY.
-    // Proibido: tudo mais (HOSTNAME, USER, SHELL, etc — fingerprinting).
+    // Allowed: process.env.BEHELD_DATA_DIR and BEHELD_NO_TELEMETRY.
+    // Forbidden: everything else (HOSTNAME, USER, SHELL, etc — fingerprinting).
     const envRefs = src.match(/process\.env\.\w+/g) ?? [];
     for (const ref of envRefs) {
       expect(ref).toMatch(/^process\.env\.BEHELD_/);

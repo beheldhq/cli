@@ -36,15 +36,15 @@ function makeDeps(opts: {
 
 // ── render + flow ────────────────────────────────────────────────────────────
 
-describe("bootstrapScreen — Tela 3.5", () => {
+describe("bootstrapScreen — Screen 3.5", () => {
   test("renders the screen after opt-in (header + three options)", async () => {
     const { deps, logs } = makeDeps({ prompts: ["3"] });
     await bootstrapScreen(deps);
     const out = logs.join("\n");
-    expect(out).toContain("Beheld · Histórico git (opcional)");
-    expect(out).toContain("[1] Importar agora");
-    expect(out).toContain("[2] Importar depois");
-    expect(out).toContain("[3] Pular");
+    expect(out).toContain("Beheld · Git history (optional)");
+    expect(out).toContain("[1] Import now");
+    expect(out).toContain("[2] Import later");
+    expect(out).toContain("[3] Skip");
   });
 
   test("includes both required privacy lines verbatim", async () => {
@@ -64,8 +64,8 @@ describe("bootstrapScreen — Tela 3.5", () => {
     expect(result.choice).toBe("import_now");
     expect(result.author_email).toBe("dev@example.com");
     expect(importCalls).toEqual([{ email: "dev@example.com" }]);
-    // No "execute depois" hint should show on [1].
-    expect(logs.join("\n")).not.toContain("Execute beheld import quando quiser");
+    // No "run later" hint should show on [1].
+    expect(logs.join("\n")).not.toContain("Run beheld import whenever you want");
   });
 
   test("option [2] shows the 'execute later' message without importing", async () => {
@@ -74,7 +74,7 @@ describe("bootstrapScreen — Tela 3.5", () => {
     expect(result.choice).toBe("later");
     expect(result.author_email).toBeUndefined();
     expect(importCalls.length).toBe(0);
-    expect(logs.join("\n")).toContain("Ok. Execute beheld import quando quiser.");
+    expect(logs.join("\n")).toContain("OK. Run beheld import whenever you want.");
   });
 
   test("option [3] skips silently (no later-hint, no import)", async () => {
@@ -83,7 +83,7 @@ describe("bootstrapScreen — Tela 3.5", () => {
     expect(result.choice).toBe("skip");
     expect(result.author_email).toBeUndefined();
     expect(importCalls.length).toBe(0);
-    expect(logs.join("\n")).not.toContain("Execute beheld import quando quiser");
+    expect(logs.join("\n")).not.toContain("Run beheld import whenever you want");
   });
 
   test("empty / unrecognized input falls back to skip", async () => {
@@ -98,7 +98,7 @@ describe("bootstrapScreen — Tela 3.5", () => {
     const result = await bootstrapScreen(deps);
     expect(result.choice).toBe("skip");
     expect(importCalls.length).toBe(0);
-    expect(logs.join("\n")).toContain("Email não informado");
+    expect(logs.join("\n")).toContain("No email provided");
   });
 });
 

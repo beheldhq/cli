@@ -539,12 +539,12 @@ describe("snapshotCommand — L1/L2 composition output", () => {
       console.log = originalLog;
     }
     const out = captured.join("\n");
-    expect(out).toContain("Perfil capturado");
-    expect(out).toContain("Base histórica:");
-    expect(out).toContain("Trajetória observada:");
+    expect(out).toContain("Profile captured");
+    expect(out).toContain("Historical base:");
+    expect(out).toContain("Observed trajectory:");
   });
 
-  test("falls back to 'não disponível' when L1 is empty", async () => {
+  test("falls back to 'not available' when L1 is empty", async () => {
     // The default mock payload has total_repos = 0 → empty L1.
     const originalLog = console.log;
     const captured: string[] = [];
@@ -556,7 +556,7 @@ describe("snapshotCommand — L1/L2 composition output", () => {
       console.log = originalLog;
     }
     const out = captured.join("\n");
-    expect(out).toContain("não disponível (execute beheld import)");
+    expect(out).toContain("not available (run beheld import)");
   });
 
   test("shows repo and commit counts when L1 has data", async () => {
@@ -591,7 +591,7 @@ describe("snapshotCommand — L1/L2 composition output", () => {
       payloadResponder = previousResponder;
     }
     const out = captured.join("\n");
-    expect(out).toContain("12 repositórios");
+    expect(out).toContain("12 repositories");
     expect(out).toContain("commits");
   });
 
@@ -634,7 +634,7 @@ describe("snapshotCommand — attestation injection", () => {
     signature: "ed25519:AAAA",
   };
 
-  test("omits attestation field quando cache não existe", async () => {
+  test("omits attestation field when cache does not exist", async () => {
     const { snapshotCommand } = await import("../src/commands/snapshot?v=att-none");
     await snapshotCommand();
     const snapDir = join(workDir, ".beheld", "snapshots");
@@ -643,7 +643,7 @@ describe("snapshotCommand — attestation injection", () => {
     expect(bundle.attestation).toBeUndefined();
   });
 
-  test("embute o conteúdo exato da cache quando ela existe", async () => {
+  test("embeds the cache content verbatim when present", async () => {
     writeAttestationCache(workDir, sampleAttestation);
     const { snapshotCommand } = await import("../src/commands/snapshot?v=att-yes");
     await snapshotCommand();
@@ -681,7 +681,7 @@ describe("snapshotCommand — attestation injection", () => {
 // ── Rekor inclusion (Phase 5 / F5.8) ────────────────────────────────────────
 
 describe("snapshotCommand — Rekor inclusion", () => {
-  test("Rekor falha → bundle salvo com rekor: null, sem erro fatal", async () => {
+  test("Rekor fails → bundle saved with rekor: null, no fatal error", async () => {
     // rekorResponder defaults to 500 in beforeEach → submitToRekor returns null
     const { snapshotCommand } = await import("../src/commands/snapshot?v=rekor-fail");
     await snapshotCommand();
@@ -691,7 +691,7 @@ describe("snapshotCommand — Rekor inclusion", () => {
     expect(bundle.rekor).toBeNull();
   });
 
-  test("Rekor sucesso → bundle persiste logIndex + uuid + integratedTime", async () => {
+  test("Rekor success → bundle persists logIndex + uuid + integratedTime", async () => {
     mockRekorResult = {
       ok: true,
       entry: {
@@ -712,7 +712,7 @@ describe("snapshotCommand — Rekor inclusion", () => {
     expect(bundle.rekor!.integratedTime).toBe("2025-06-01T16:00:00.000Z");
   });
 
-  test("--no-rekor pula a submissão e mantém rekor: null", async () => {
+  test("--no-rekor skips submission and keeps rekor: null", async () => {
     // If snapshot still called submitToRekor with --no-rekor, mockRekorResult
     // would have been read (rekorCallCount > 0). Assert it was NOT called.
     mockRekorResult = {
@@ -751,7 +751,7 @@ describe("snapshotCommand — Rekor inclusion", () => {
     expect(bundle.rekor).not.toBeNull();
   });
 
-  test("--rekor-submit promove um bundle existente sem reescrever o payload", async () => {
+  test("--rekor-submit promotes an existing bundle without rewriting the payload", async () => {
     // First: generate an offline bundle (rekor null) — default mockRekorResult
     // is { ok: false, reason: rejected }.
     const { snapshotCommand: snap1 } = await import("../src/commands/snapshot?v=rekor-resub-1");

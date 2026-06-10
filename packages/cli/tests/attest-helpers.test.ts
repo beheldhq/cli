@@ -9,25 +9,25 @@ import {
 } from "../src/commands/attest";
 
 describe("jwkXToStdB64", () => {
-  test("converte caractere base64url '-' pra '+' standard", () => {
+  test("converts base64url char '-' to '+' standard", () => {
     expect(jwkXToStdB64("a-b")).toBe("a+b=");
   });
 
-  test("converte caractere base64url '_' pra '/' standard", () => {
+  test("converts base64url char '_' to '/' standard", () => {
     expect(jwkXToStdB64("a_b")).toBe("a/b=");
   });
 
-  test("adiciona padding '=' até múltiplo de 4", () => {
+  test("pads with '=' to multiple of 4", () => {
     expect(jwkXToStdB64("AAA")).toBe("AAA=");
     expect(jwkXToStdB64("AA")).toBe("AA==");
     expect(jwkXToStdB64("A")).toBe("A===");
   });
 
-  test("não altera input que já é múltiplo de 4 sem chars especiais", () => {
+  test("leaves input alone when already multiple of 4 without special chars", () => {
     expect(jwkXToStdB64("AAAA")).toBe("AAAA");
   });
 
-  test("converte JWK.x real (43 chars base64url) pra 44 chars standard padded", () => {
+  test("converts real JWK.x (43 base64url chars) to 44 standard padded chars", () => {
     // 32 raw bytes = 43 base64url chars (no padding) or 44 standard chars (1 pad).
     const jwkX = "ao_AsOyFTMrORd9irGlQjbxI5C7Qb4TfZVi7sgnoyio";
     expect(jwkXToStdB64(jwkX)).toBe("ao/AsOyFTMrORd9irGlQjbxI5C7Qb4TfZVi7sgnoyio=");
@@ -35,19 +35,19 @@ describe("jwkXToStdB64", () => {
 });
 
 describe("generateCliState", () => {
-  test("retorna string base64url com pelo menos 32 chars (24 bytes encoded)", () => {
+  test("returns base64url string with at least 32 chars (24 bytes encoded)", () => {
     const s = generateCliState();
     expect(s.length).toBeGreaterThanOrEqual(32);
     expect(s).toMatch(/^[A-Za-z0-9_\-]+$/);
   });
 
-  test("chamadas consecutivas produzem valores distintos", () => {
+  test("consecutive calls produce distinct values", () => {
     expect(generateCliState()).not.toBe(generateCliState());
   });
 });
 
 describe("buildStartUrl", () => {
-  test("monta URL com cli_state, cli_port e dev_pubkey URL-encoded", () => {
+  test("builds URL with cli_state, cli_port and URL-encoded dev_pubkey", () => {
     const url = buildStartUrl({
       baseUrl: "http://localhost:3000",
       cliState: "abc123",
@@ -62,22 +62,22 @@ describe("buildStartUrl", () => {
 });
 
 describe("parseCallbackQuery", () => {
-  test("extrai cli_state e claim_code do search params", () => {
+  test("extracts cli_state and claim_code from search params", () => {
     const sp = new URLSearchParams({ cli_state: "s", claim_code: "c" });
     expect(parseCallbackQuery(sp)).toEqual({ cliState: "s", claimCode: "c" });
   });
 
-  test("estoura quando cli_state ausente", () => {
+  test("throws when cli_state is missing", () => {
     expect(() => parseCallbackQuery(new URLSearchParams({ claim_code: "c" }))).toThrow(/cli_state/);
   });
 
-  test("estoura quando claim_code ausente", () => {
+  test("throws when claim_code is missing", () => {
     expect(() => parseCallbackQuery(new URLSearchParams({ cli_state: "s" }))).toThrow(/claim_code/);
   });
 });
 
 describe("claimAttestation", () => {
-  test("faz POST com claim_code e retorna o JSON da attestation", async () => {
+  test("POSTs with claim_code and returns the attestation JSON", async () => {
     const expected = {
       payload: {
         type: "beheld-identity-attestation/v1",
@@ -100,7 +100,7 @@ describe("claimAttestation", () => {
     expect(result).toEqual(expected);
   });
 
-  test("estoura quando backend responde !ok", async () => {
+  test("throws when backend responds !ok", async () => {
     const fakeFetch = (async () =>
       new Response("not found", { status: 404 })) as unknown as typeof fetch;
     await expect(claimAttestation("http://x", "c", fakeFetch)).rejects.toThrow(/404/);

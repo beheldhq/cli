@@ -191,11 +191,11 @@ describe("slugFromUrl", () => {
 });
 
 describe("isAffirmative", () => {
-  test("treats s/y/sim/yes (any case) as yes; everything else as no", () => {
-    for (const yes of ["s", "S", "y", "Y", "sim", "Sim", "yes", "YES"]) {
+  test("treats y/yes (any case) as yes; everything else as no", () => {
+    for (const yes of ["y", "Y", "yes", "YES"]) {
       expect(isAffirmative(yes)).toBe(true);
     }
-    for (const no of ["", "n", "N", "no", "não", "0", "x", "  "]) {
+    for (const no of ["", "n", "N", "no", "s", "S", "sim", "0", "x", "  "]) {
       expect(isAffirmative(no)).toBe(false);
     }
   });
@@ -234,7 +234,7 @@ describe("runShare", () => {
     });
     expect(outcome.ok).toBe(false);
     expect(outcome.exitCode).toBe(1);
-    expect(lines.some((l) => /Nenhum bundle encontrado/.test(l))).toBe(true);
+    expect(lines.some((l) => /no bundle found/.test(l))).toBe(true);
     cleanup();
   });
 
@@ -276,7 +276,7 @@ describe("runShare", () => {
 
     expect(outcome.ok).toBe(false);
     expect(outcome.exitCode).toBe(1);
-    expect(lines.some((l) => /Falha no upload/.test(l))).toBe(true);
+    expect(lines.some((l) => /upload failed/.test(l))).toBe(true);
 
     // Bundle file untouched.
     expect(existsSync(bundlePath)).toBe(true);
@@ -290,7 +290,7 @@ describe("runShare", () => {
 
     const outcome = await runShare({
       snapshotsDir, configPath,
-      prompter: scriptedPrompter(["s", "dev@example.com"]),
+      prompter: scriptedPrompter(["y", "dev@example.com"]),
       out: (l) => lines.push(l),
     });
 

@@ -11,7 +11,7 @@
  *
  *   The companion Rails endpoint `GET /api/version` was added in the same
  *   PR — without it, `fetchLatestVersion` returned null (404) and surfaced
- *   the catch-all "Não foi possível verificar a versão disponível." This
+ *   the catch-all "Could not check available version." This
  *   file covers the CLI side; the backend behaviour is tested in
  *   `web/source/backend/spec/requests/version_spec.rb`.
  */
@@ -111,7 +111,7 @@ describe("updateCommand — version comparison flow", () => {
     else process.env.BEHELD_API_URL = ORIGINAL_API_URL;
   });
 
-  test("REGRESSION — server reports same version as binary → 'já é a versão mais recente'", async () => {
+  test("REGRESSION — server reports same version as binary → 'already the latest version'", async () => {
     // This is the test that would have failed before 0efe9e6. With the
     // stale VERSION="0.3.2" and the binary at 0.4.1, the comparison
     // `latest === VERSION` couldn't succeed even with a working endpoint.
@@ -132,13 +132,13 @@ describe("updateCommand — version comparison flow", () => {
     }
 
     const clean = stripAnsi(cap.output);
-    expect(clean).toContain(`Beheld ${VERSION} já é a versão mais recente.`);
+    expect(clean).toContain(`Beheld ${VERSION} is already the latest version.`);
     // Must NOT have proceeded into the download path.
-    expect(clean).not.toContain("Atualizar agora?");
-    expect(clean).not.toContain("Baixando");
+    expect(clean).not.toContain("Update now?");
+    expect(clean).not.toContain("Downloading");
   });
 
-  test("network failure → 'Não foi possível verificar a versão disponível'", async () => {
+  test("network failure → 'Could not check available version'", async () => {
     // /api/version returns 404 (the exact production state pre-deploy of
     // VersionsController) — fetchLatestVersion sees !res.ok and returns
     // null. CLI surfaces the friendly catch-all.
@@ -152,7 +152,7 @@ describe("updateCommand — version comparison flow", () => {
     } finally {
       cap.restore();
     }
-    expect(stripAnsi(cap.output)).toContain("Não foi possível verificar a versão disponível.");
+    expect(stripAnsi(cap.output)).toContain("Could not check available version.");
   });
 
   test("fetch throws (DNS / timeout) → same catch-all message", async () => {
@@ -166,7 +166,7 @@ describe("updateCommand — version comparison flow", () => {
     } finally {
       cap.restore();
     }
-    expect(stripAnsi(cap.output)).toContain("Não foi possível verificar a versão disponível.");
+    expect(stripAnsi(cap.output)).toContain("Could not check available version.");
   });
 
   test("malformed JSON body → null version → catch-all message", async () => {
@@ -183,7 +183,7 @@ describe("updateCommand — version comparison flow", () => {
     } finally {
       cap.restore();
     }
-    expect(stripAnsi(cap.output)).toContain("Não foi possível verificar a versão disponível.");
+    expect(stripAnsi(cap.output)).toContain("Could not check available version.");
   });
 
   test("JSON without 'version' field → null → catch-all message", async () => {
@@ -200,7 +200,7 @@ describe("updateCommand — version comparison flow", () => {
     } finally {
       cap.restore();
     }
-    expect(stripAnsi(cap.output)).toContain("Não foi possível verificar a versão disponível.");
+    expect(stripAnsi(cap.output)).toContain("Could not check available version.");
   });
 
   test("endpoint URL — fetchLatestVersion hits exactly <api>/version", async () => {

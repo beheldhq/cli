@@ -70,7 +70,7 @@ describe("renderStepCompletion", () => {
     expect(lines[0]).toContain("(2.1s)");
   });
 
-  test("step error com reason → 2 linhas", async () => {
+  test("step error with reason → 2 lines", async () => {
     const { renderStepCompletion } = await import("../../src/install/render");
     const state = {
       step: {
@@ -88,7 +88,7 @@ describe("renderStepCompletion", () => {
     expect(lines[1]).toContain("reason: /health timeout :7338");
   });
 
-  test("step error com reason + seeAlso → 3 linhas", async () => {
+  test("step error with reason + seeAlso → 3 lines", async () => {
     const { renderStepCompletion } = await import("../../src/install/render");
     const state = {
       step: {
@@ -154,12 +154,12 @@ describe("i18n t()", () => {
     expect(isLang("")).toBe(false);
   });
 
-  test("unknown key returns the key (visible em revisão)", async () => {
+  test("unknown key returns the key (visible in review)", async () => {
     const { t } = await import("../../src/i18n/install");
     expect(t("install.does.not.exist", "en")).toBe("install.does.not.exist");
   });
 
-  test("nenhuma menção a IP de terceiros (R2D2, K-2SO, LEGO)", async () => {
+  test("no mention of third-party IP (R2D2, K-2SO, LEGO)", async () => {
     const { t } = await import("../../src/i18n/install");
     const keys = [
       "install.opener",
@@ -182,7 +182,7 @@ describe("i18n t()", () => {
 // ── detectRenderEnv ──────────────────────────────────────────────────────────
 
 describe("detectRenderEnv", () => {
-  test("NO_COLOR=1 desliga cor mesmo em TTY", async () => {
+  test("NO_COLOR=1 turns off color even in TTY", async () => {
     const orig = process.env.NO_COLOR;
     const origTty = process.stdout.isTTY;
     try {
@@ -199,7 +199,7 @@ describe("detectRenderEnv", () => {
     }
   });
 
-  test("não-TTY → color=false", async () => {
+  test("non-TTY → color=false", async () => {
     const origTty = process.stdout.isTTY;
     try {
       Object.defineProperty(process.stdout, "isTTY", { value: false, configurable: true });

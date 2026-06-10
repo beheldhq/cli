@@ -9,7 +9,7 @@ const originalDataDir = process.env.BEHELD_DATA_DIR;
 beforeEach(() => {
   tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "beheld-backoff-"));
   process.env.BEHELD_DATA_DIR = tmpDir;
-  // Não pré-criamos ~/.beheld/ aqui para validar que saveBackoffState cria.
+  // We don't pre-create ~/.beheld/ here to verify saveBackoffState creates it.
 });
 
 afterEach(() => {
@@ -26,13 +26,13 @@ describe("pruneStaleFailures", () => {
     expect(pruneStaleFailures([], 1000, 500)).toEqual([]);
   });
 
-  test("remove timestamps fora da janela", async () => {
+  test("removes timestamps outside the window", async () => {
     const { pruneStaleFailures } = await import("../../src/supervisor/backoff");
-    // janela = [now - window, now] = [500, 1000]; 100 fica fora.
+    // window = [now - window, now] = [500, 1000]; 100 is outside.
     expect(pruneStaleFailures([100, 500, 800], 1000, 500)).toEqual([500, 800]);
   });
 
-  test("janela larga o suficiente → mantém todos", async () => {
+  test("window wide enough → keeps all", async () => {
     const { pruneStaleFailures } = await import("../../src/supervisor/backoff");
     expect(pruneStaleFailures([100, 500, 800], 1000, 1000)).toEqual([100, 500, 800]);
   });
@@ -46,17 +46,17 @@ describe("shouldSuspend", () => {
     expect(shouldSuspend([], 3)).toBe(false);
   });
 
-  test("2 falhas / threshold=3 → false", async () => {
+  test("2 failures / threshold=3 → false", async () => {
     const { shouldSuspend } = await import("../../src/supervisor/backoff");
     expect(shouldSuspend([1, 2], 3)).toBe(false);
   });
 
-  test("3 falhas / threshold=3 → true (>= é a borda)", async () => {
+  test("3 failures / threshold=3 → true (>= is the boundary)", async () => {
     const { shouldSuspend } = await import("../../src/supervisor/backoff");
     expect(shouldSuspend([1, 2, 3], 3)).toBe(true);
   });
 
-  test("4 falhas / threshold=3 → true", async () => {
+  test("4 failures / threshold=3 → true", async () => {
     const { shouldSuspend } = await import("../../src/supervisor/backoff");
     expect(shouldSuspend([1, 2, 3, 4], 3)).toBe(true);
   });
@@ -65,19 +65,19 @@ describe("shouldSuspend", () => {
 // ── recordFailure (pure) ─────────────────────────────────────────────────────
 
 describe("recordFailure", () => {
-  test("adiciona timestamp e poda janela", async () => {
+  test("adds timestamp and prunes window", async () => {
     const { recordFailure, BACKOFF_WINDOW_MS } = await import("../../src/supervisor/backoff");
     const state = {
       engine_restart_failures: [100],
       suspended_at: null,
       suspended_reason: null,
     };
-    const now = 100 + BACKOFF_WINDOW_MS + 1; // 100 fica fora da janela
+    const now = 100 + BACKOFF_WINDOW_MS + 1; // 100 falls outside the window
     const updated = recordFailure(state, now);
     expect(updated.engine_restart_failures).toEqual([now]);
   });
 
-  test("não modifica suspended_at", async () => {
+  test("does not modify suspended_at", async () => {
     const { recordFailure } = await import("../../src/supervisor/backoff");
     const state = {
       engine_restart_failures: [],
@@ -93,7 +93,7 @@ describe("recordFailure", () => {
 // ── clearBackoff (pure) ──────────────────────────────────────────────────────
 
 describe("clearBackoff", () => {
-  test("retorna state default zerado", async () => {
+  test("returns default zeroed state", async () => {
     const { clearBackoff } = await import("../../src/supervisor/backoff");
     expect(clearBackoff()).toEqual({
       engine_restart_failures: [],
@@ -120,7 +120,7 @@ describe("isSuspended", () => {
 // ── loadBackoffState / saveBackoffState (persistence) ────────────────────────
 
 describe("loadBackoffState", () => {
-  test("arquivo ausente → state default", async () => {
+  test("missing file → default state", async () => {
     const { loadBackoffState } = await import("../../src/supervisor/backoff");
     expect(loadBackoffState()).toEqual({
       engine_restart_failures: [],
@@ -129,7 +129,7 @@ describe("loadBackoffState", () => {
     });
   });
 
-  test("JSON corrompido → state default sem crashar", async () => {
+  test("corrupted JSON → default state without crashing", async () => {
     fs.mkdirSync(path.join(tmpDir, ".beheld"), { recursive: true, mode: 0o700 });
     fs.writeFileSync(path.join(tmpDir, ".beheld", "supervisor-backoff.json"), "{ not json");
     const { loadBackoffState } = await import("../../src/supervisor/backoff");
@@ -140,7 +140,7 @@ describe("loadBackoffState", () => {
     });
   });
 
-  test("validação defensiva ignora campos com shape errado", async () => {
+  test("defensive validation ignores fields with wrong shape", async () => {
     fs.mkdirSync(path.join(tmpDir, ".beheld"), { recursive: true, mode: 0o700 });
     fs.writeFileSync(
       path.join(tmpDir, ".beheld", "supervisor-backoff.json"),
@@ -159,18 +159,18 @@ describe("loadBackoffState", () => {
 });
 
 describe("saveBackoffState", () => {
-  test("save + load = roundtrip idempotente", async () => {
+  test("save + load = idempotent roundtrip", async () => {
     const { saveBackoffState, loadBackoffState } = await import("../../src/supervisor/backoff");
     const original = {
       engine_restart_failures: [100, 200, 300],
       suspended_at: 12345,
-      suspended_reason: "teste",
+      suspended_reason: "test",
     };
     saveBackoffState(original);
     expect(loadBackoffState()).toEqual(original);
   });
 
-  test("cria ~/.beheld/ se ausente", async () => {
+  test("creates ~/.beheld/ if missing", async () => {
     const { saveBackoffState } = await import("../../src/supervisor/backoff");
     expect(fs.existsSync(path.join(tmpDir, ".beheld"))).toBe(false);
     saveBackoffState({ engine_restart_failures: [], suspended_at: null, suspended_reason: null });
@@ -178,19 +178,19 @@ describe("saveBackoffState", () => {
     expect(fs.existsSync(path.join(tmpDir, ".beheld", "supervisor-backoff.json"))).toBe(true);
   });
 
-  test("arquivo gravado com mode 0o600", async () => {
+  test("file written with mode 0o600", async () => {
     const { saveBackoffState } = await import("../../src/supervisor/backoff");
     saveBackoffState({ engine_restart_failures: [], suspended_at: null, suspended_reason: null });
     const stat = fs.statSync(path.join(tmpDir, ".beheld", "supervisor-backoff.json"));
-    // mask para os 9 bits de perm (rwxrwxrwx).
+    // mask for the 9 perm bits (rwxrwxrwx).
     expect(stat.mode & 0o777).toBe(0o600);
   });
 });
 
-// ── Cenário ponta-a-ponta ────────────────────────────────────────────────────
+// ── End-to-end scenario ──────────────────────────────────────────────────────
 
-describe("Cenário ponta-a-ponta — 3 falhas em 5 min suspendem", () => {
-  test("recordFailure × 3 → shouldSuspend → save → load mantém suspended_at", async () => {
+describe("End-to-end scenario — 3 failures in 5 min suspend", () => {
+  test("recordFailure × 3 → shouldSuspend → save → load preserves suspended_at", async () => {
     const {
       loadBackoffState,
       saveBackoffState,
@@ -203,7 +203,7 @@ describe("Cenário ponta-a-ponta — 3 falhas em 5 min suspendem", () => {
     let state = loadBackoffState();
     const t0 = 1_000_000;
 
-    // 3 falhas consecutivas dentro da janela.
+    // 3 consecutive failures within the window.
     state = recordFailure(state, t0);
     expect(shouldSuspend(state.engine_restart_failures, BACKOFF_THRESHOLD)).toBe(false);
     state = recordFailure(state, t0 + 10_000);
@@ -211,18 +211,18 @@ describe("Cenário ponta-a-ponta — 3 falhas em 5 min suspendem", () => {
     state = recordFailure(state, t0 + 20_000);
     expect(shouldSuspend(state.engine_restart_failures, BACKOFF_THRESHOLD)).toBe(true);
 
-    // Caller dispara a transição para suspended_at.
+    // Caller triggers the transition to suspended_at.
     state.suspended_at = t0 + 20_001;
-    state.suspended_reason = "teste";
+    state.suspended_reason = "test";
     saveBackoffState(state);
 
-    // Próximo "boot" do supervisor carrega o estado suspenso.
+    // Next supervisor "boot" loads the suspended state.
     const reloaded = loadBackoffState();
     expect(isSuspended(reloaded)).toBe(true);
     expect(reloaded.suspended_at).toBe(t0 + 20_001);
   });
 
-  test("clearBackoff zera tudo (sinal do user via beheld start)", async () => {
+  test("clearBackoff resets everything (user signal via beheld start)", async () => {
     const { saveBackoffState, loadBackoffState, clearBackoff } = await import("../../src/supervisor/backoff");
     saveBackoffState({
       engine_restart_failures: [1, 2, 3],

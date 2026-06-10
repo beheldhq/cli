@@ -183,9 +183,9 @@ describe("runImport — interactive loop", () => {
       pollIntervalMs: 1,
     });
     const out = logs.join("\n");
-    expect(out).toContain("Nenhum commit seu encontrado");
-    expect(out).toContain("Bootstrap concluído");
-    expect(out).toContain("0 repositório(s)");
+    expect(out).toContain("no commits of yours found");
+    expect(out).toContain("Bootstrap complete");
+    expect(out).toContain("0 repository(ies)");
   });
 
   test("handles already_imported and shows the count of zero new repos", async () => {
@@ -340,7 +340,7 @@ describe("runImport — --remove", () => {
       config: inMemoryConfig("dev@example.com"),
     });
     expect(deleteCalls.length).toBe(0);
-    expect(logs.join("\n")).toContain("Operação cancelada");
+    expect(logs.join("\n")).toContain("operation cancelled");
   });
 
   test("requires confirmation before deleting", async () => {
@@ -361,7 +361,7 @@ describe("runImport — --remove", () => {
       io, client,
       config: inMemoryConfig("dev@example.com"),
     });
-    expect(logs.join("\n")).toContain("Repositório não encontrado");
+    expect(logs.join("\n")).toContain("repository not found");
   });
 });
 

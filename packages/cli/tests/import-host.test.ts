@@ -244,7 +244,7 @@ describe("host-list-client — GitHub", () => {
     }
     expect(err).toBeInstanceOf(HostListError);
     expect(err?.status).toBe(401);
-    expect(err?.message).toContain("Credenciais inválidas");
+    expect(err?.message).toContain("invalid credentials");
   });
 
   test("test_github_fetch_429_returns_rate_limit_message", async () => {
@@ -256,7 +256,7 @@ describe("host-list-client — GitHub", () => {
       err = e as HostListError;
     }
     expect(err?.status).toBe(429);
-    expect(err?.message).toContain("Limite de requisições");
+    expect(err?.message).toContain("rate limit");
   });
 
   test("github sends Bearer auth + UA headers", async () => {
@@ -396,7 +396,7 @@ describe("host-list-client — shared error mapping", () => {
       err = e as HostListError;
     }
     expect(err).toBeInstanceOf(HostListError);
-    expect(err?.message).toContain("Tempo esgotado");
+    expect(err?.message).toContain("timed out");
   });
 
   test("403 maps to permission-insufficient", async () => {
@@ -408,7 +408,7 @@ describe("host-list-client — shared error mapping", () => {
       err = e as HostListError;
     }
     expect(err?.status).toBe(403);
-    expect(err?.message).toContain("Permissão insuficiente");
+    expect(err?.message).toContain("insufficient permissions");
   });
 
   test("404 maps to user-not-found", async () => {
@@ -420,7 +420,7 @@ describe("host-list-client — shared error mapping", () => {
       err = e as HostListError;
     }
     expect(err?.status).toBe(404);
-    expect(err?.message).toContain("Usuário não encontrado");
+    expect(err?.message).toContain("user not found");
   });
 
   test("5xx maps to server-error", async () => {
@@ -432,7 +432,7 @@ describe("host-list-client — shared error mapping", () => {
       err = e as HostListError;
     }
     expect(err?.status).toBe(503);
-    expect(err?.message).toContain("Erro no servidor");
+    expect(err?.message).toContain("server error");
   });
 });
 
@@ -578,8 +578,8 @@ describe("runHostImport — full flow", () => {
       "git@github.com:me/a.git",
       "git@github.com:me/b.git",
     ]);
-    expect(logs.join("\n")).toContain("Conectando ao GitHub");
-    expect(logs.join("\n")).toContain("repositórios encontrados");
+    expect(logs.join("\n")).toContain("Connecting to GitHub");
+    expect(logs.join("\n")).toContain("repositories found");
   });
 
   test("test_ssh_fallback_to_https_on_clone_error", async () => {
@@ -618,7 +618,7 @@ describe("runHostImport — full flow", () => {
     ]);
     expect(summary.imported).toBe(1);
     expect(summary.total_commits).toBe(5);
-    expect(logs.some((l) => l.includes("SSH indisponível"))).toBe(true);
+    expect(logs.some((l) => l.includes("SSH unavailable"))).toBe(true);
   });
 
   test("test_empty_selection_exits_without_import", async () => {
@@ -655,7 +655,7 @@ describe("runHostImport — full flow", () => {
       failed: 0,
       total_commits: 0,
     });
-    expect(logs.some((l) => l.includes("Nenhum repositório selecionado"))).toBe(true);
+    expect(logs.some((l) => l.includes("No repositories selected"))).toBe(true);
   });
 
   test("test_summary_counts_imported_existing_and_not_found", async () => {
@@ -724,7 +724,7 @@ describe("runHostImport — full flow", () => {
 
     expect(fetchCalled).toBe(false);
     expect(summary.imported).toBe(0);
-    expect(logs.some((l) => l.includes("Operação cancelada"))).toBe(true);
+    expect(logs.some((l) => l.includes("operation cancelled"))).toBe(true);
   });
 
   test("listing error is reported and stops the flow", async () => {
@@ -750,6 +750,6 @@ describe("runHostImport — full flow", () => {
     );
 
     expect(summary.imported).toBe(0);
-    expect(logs.some((l) => l.includes("Credenciais inválidas"))).toBe(true);
+    expect(logs.some((l) => l.includes("invalid credentials"))).toBe(true);
   });
 });

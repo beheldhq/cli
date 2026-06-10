@@ -55,54 +55,54 @@ describe("maybeShowBundleNudge", () => {
     delete process.env.BEHELD_FORCE_NUDGE;
   });
 
-  it("não imprime nudge quando não há snapshots", async () => {
+  it("does not print nudge when there are no snapshots", async () => {
     const { maybeShowBundleNudge } = await import("../src/lib/nudge");
     const out = captureStderr(() => maybeShowBundleNudge());
     expect(out).toBe("");
   });
 
-  it("não imprime nudge quando o bundle mais recente tem < 5 dias", async () => {
+  it("does not print nudge when the latest bundle is < 5 days old", async () => {
     writeSnapshotWithAge(home, "recent.beheld", 2);
     const { maybeShowBundleNudge } = await import("../src/lib/nudge");
     const out = captureStderr(() => maybeShowBundleNudge());
     expect(out).toBe("");
   });
 
-  it("imprime nudge quando o bundle tem ≥ 5 dias", async () => {
+  it("prints nudge when the bundle is ≥ 5 days old", async () => {
     writeSnapshotWithAge(home, "old.beheld", 7);
     const { maybeShowBundleNudge } = await import("../src/lib/nudge");
     const out = captureStderr(() => maybeShowBundleNudge());
-    expect(out).toMatch(/Seu bundle tem 7 dias/);
+    expect(out).toMatch(/Your bundle is 7 days old/);
     expect(out).toMatch(/beheld snapshot/);
   });
 
-  it("escolhe o snapshot mais novo entre vários (idade do mais recente)", async () => {
+  it("picks the newest snapshot among several (age of the most recent)", async () => {
     writeSnapshotWithAge(home, "ancient.beheld", 30);
     writeSnapshotWithAge(home, "newer.beheld", 3);
     const { maybeShowBundleNudge } = await import("../src/lib/nudge");
     const out = captureStderr(() => maybeShowBundleNudge());
-    // O mais recente tem 3 dias → não nudge
+    // The newest is 3 days old → no nudge
     expect(out).toBe("");
   });
 
-  it("suppress no segundo call dentro da mesma sessão (marker do ppid)", async () => {
+  it("suppresses the second call within the same session (ppid marker)", async () => {
     writeSnapshotWithAge(home, "old.beheld", 10);
     const { maybeShowBundleNudge } = await import("../src/lib/nudge");
 
     const first  = captureStderr(() => maybeShowBundleNudge());
     const second = captureStderr(() => maybeShowBundleNudge());
 
-    expect(first).toMatch(/Seu bundle tem/);
+    expect(first).toMatch(/Your bundle is/);
     expect(second).toBe("");
     expect(existsSync(path.join(home, ".nudge_session"))).toBe(true);
     const marker = readFileSync(path.join(home, ".nudge_session"), "utf-8");
     expect(marker).toMatch(new RegExp(`^${process.ppid}:\\d+$`));
   });
 
-  it("aceita .dpbundle além de .beheld", async () => {
+  it("accepts .dpbundle in addition to .beheld", async () => {
     writeSnapshotWithAge(home, "old.dpbundle", 8);
     const { maybeShowBundleNudge } = await import("../src/lib/nudge");
     const out = captureStderr(() => maybeShowBundleNudge());
-    expect(out).toMatch(/Seu bundle tem 8 dias/);
+    expect(out).toMatch(/Your bundle is 8 days old/);
   });
 });

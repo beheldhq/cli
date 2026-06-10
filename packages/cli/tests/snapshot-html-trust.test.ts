@@ -74,20 +74,20 @@ describe("renderTierBadge — ladder mapping", () => {
     const html = renderSnapshotHtml(makeData({ attestation: ATTESTATION, rekor: null }));
     expect(html).toContain('data-tier="engine_verified"');
     expect(html).toContain("tier-strong");
-    expect(html).toContain("engine verificados");
+    expect(html).toContain("engine verified");
   });
 
   test("signature only (no attestation, no rekor) → 'neutral' (signature_only)", () => {
     const html = renderSnapshotHtml(makeData({ attestation: null, rekor: null }));
     expect(html).toContain('data-tier="signature_only"');
     expect(html).toContain("tier-neutral");
-    expect(html).toContain("Assinado localmente");
+    expect(html).toContain("Locally signed");
   });
 
   test("unsigned bundle → 'neutral' (unsigned)", () => {
     const html = renderSnapshotHtml(makeData({ signature: "", attestation: null, rekor: null }));
     expect(html).toContain('data-tier="unsigned"');
-    expect(html).toContain("Não assinado");
+    expect(html).toContain("Unsigned");
   });
 });
 
@@ -98,19 +98,19 @@ describe("renderTrustDetails — GitHub identity block", () => {
     const bundle = makeData({ attestation: ATTESTATION }).bundle as any;
     const html = renderTrustDetails(bundle);
 
-    expect(html).toContain("Identidade GitHub");
+    expect(html).toContain("GitHub identity");
     expect(html).toContain("@eduardovrocha");
     expect(html).toContain("https://github.com/eduardovrocha");
     expect(html).toContain("user id 181376");
-    expect(html).toContain("24/05/2026");
+    expect(html).toContain("2026-05-24");
   });
 
   test("shows attestation hint when attestation is absent", () => {
     const bundle = makeData({ attestation: null }).bundle as any;
     const html = renderTrustDetails(bundle);
 
-    expect(html).toContain("Identidade GitHub");
-    expect(html).toContain("Não vinculada");
+    expect(html).toContain("GitHub identity");
+    expect(html).toContain("Not linked");
     expect(html).toContain("beheld attest");
     expect(html).not.toContain("github.com/");
   });
@@ -120,7 +120,7 @@ describe("renderTrustDetails — GitHub identity block", () => {
       attestation: { ...ATTESTATION, signature: "" },
     }).bundle as any;
     const html = renderTrustDetails(bundle);
-    expect(html).toContain("Não vinculada");
+    expect(html).toContain("Not linked");
   });
 });
 
@@ -132,7 +132,7 @@ describe("renderTrustDetails — Rekor block", () => {
     expect(html).toContain("Sigstore Rekor");
     expect(html).toContain("log #287435982");
     // 🎉 prefixes the section title (not the body) to mark the inclusion
-    // as a confirmed success — recrutador não passa por isso por acidente.
+    // as a confirmed success — recruiters don't get there by accident.
     expect(html).toContain('<p class="trust-section-title">🎉 Sigstore Rekor</p>');
     // Primary link: user-friendly Sigstore search UI by logIndex.
     expect(html).toContain("search.sigstore.dev/?logIndex=287435982");
@@ -140,15 +140,15 @@ describe("renderTrustDetails — Rekor block", () => {
     expect(html).toContain("rekor.sigstore.dev/api/v1/log/entries/" + REKOR.uuid);
     // UUID is truncated for display; full UUID is only in the API URL.
     expect(html).toContain("abcdef012345…6789");
-    expect(html).toContain("24/05/2026");
+    expect(html).toContain("2026-05-24");
   });
 
-  test("shows 'não submetido' hint when rekor is null", () => {
+  test("shows 'not submitted' hint when rekor is null", () => {
     const bundle = makeData({ rekor: null }).bundle as any;
     const html = renderTrustDetails(bundle);
 
     expect(html).toContain("Sigstore Rekor");
-    expect(html).toContain("Não submetido");
+    expect(html).toContain("Not submitted");
     expect(html).toContain("--rekor-submit");
     expect(html).not.toContain("rekor.sigstore.dev/api/v1/log/entries/");
   });
@@ -156,7 +156,7 @@ describe("renderTrustDetails — Rekor block", () => {
   test("treats malformed rekor (missing logIndex) as absent", () => {
     const bundle = makeData({ rekor: { uuid: "x" } }).bundle as any;
     const html = renderTrustDetails(bundle);
-    expect(html).toContain("Não submetido");
+    expect(html).toContain("Not submitted");
   });
 });
 

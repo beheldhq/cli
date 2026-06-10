@@ -1,21 +1,21 @@
 import { test, expect, describe } from "bun:test";
 
 describe("pidListeningOn", () => {
-  test("retorna undefined em porta sem listener", async () => {
+  test("returns undefined on a port with no listener", async () => {
     const { pidListeningOn } = await import("../../src/util/ports");
-    // Porta improvável de estar em uso na máquina de teste.
+    // Port unlikely to be in use on the test machine.
     expect(pidListeningOn(65530)).toBeUndefined();
   });
 });
 
 describe("engineHealthy", () => {
-  test("retorna false quando ninguém escuta a porta", async () => {
+  test("returns false when nobody listens on the port", async () => {
     const { engineHealthy } = await import("../../src/util/ports");
     const result = await engineHealthy(65530, 500);
     expect(result).toBe(false);
   });
 
-  test("retorna true contra um servidor /health=200 local", async () => {
+  test("returns true against a local /health=200 server", async () => {
     const { engineHealthy } = await import("../../src/util/ports");
     const server = Bun.serve({
       port: 0,
@@ -33,7 +33,7 @@ describe("engineHealthy", () => {
     }
   });
 
-  test("retorna false em timeout", async () => {
+  test("returns false on timeout", async () => {
     const { engineHealthy } = await import("../../src/util/ports");
     const server = Bun.serve({
       port: 0,
@@ -55,13 +55,13 @@ describe("engineHealthy", () => {
 });
 
 describe("waitSocketRelease", () => {
-  test("retorna true imediato quando ninguém escuta", async () => {
+  test("returns true immediately when nobody listens", async () => {
     const { waitSocketRelease } = await import("../../src/util/ports");
     const result = await waitSocketRelease(65530, 1000);
     expect(result).toBe(true);
   });
 
-  test("retorna false em timeout enquanto socket continua preso", async () => {
+  test("returns false on timeout while socket stays held", async () => {
     const { waitSocketRelease } = await import("../../src/util/ports");
     const server = Bun.serve({ port: 0, fetch: () => new Response("x") });
     try {
@@ -75,20 +75,20 @@ describe("waitSocketRelease", () => {
     }
   });
 
-  test("retorna true quando socket libera durante o poll", async () => {
+  test("returns true when socket releases during the poll", async () => {
     const { waitSocketRelease } = await import("../../src/util/ports");
     const server = Bun.serve({ port: 0, fetch: () => new Response("x") });
     const port = server.port;
-    // Stop após 300ms — o poll deve detectar.
+    // Stop after 300ms — the poll must detect it.
     setTimeout(() => server.stop(), 300);
     const result = await waitSocketRelease(port, 2000);
-    // Validação do contrato lógico: a função detecta corretamente a
-    // liberação dentro do timeout. NÃO assertamos wall-clock — o
-    // `spawnSync("lsof")` interno fica enfileirado sob load da suite
-    // completa (macOS lsof é serializado), inflando o elapsed para
-    // 2-3s e quebrando uma assertion que não testa o contrato real.
-    // Em produção o que importa é o `true/false` final, e esse é
-    // entregue corretamente.
+    // Logical contract: the function correctly detects the release
+    // within the timeout. We do NOT assert wall-clock — the internal
+    // `spawnSync("lsof")` queues up under full-suite load (macOS lsof
+    // is serialized), inflating elapsed to 2-3s and breaking an
+    // assertion that does not test the real contract. In production
+    // what matters is the final `true/false`, and that is delivered
+    // correctly.
     expect(result).toBe(true);
   });
 });

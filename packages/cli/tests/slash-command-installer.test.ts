@@ -116,7 +116,7 @@ describe("installClaudeSlashCommand — versioning", () => {
     const file = tmpFile("beheld.md");
     writeFileSync(
       file,
-      '---\nversion: "1"\n---\nantigo conteúdo nosso\n',
+      '---\nversion: "1"\n---\nour old content\n',
     );
 
     await installClaudeSlashCommand(file);
@@ -147,13 +147,13 @@ describe("installClaudeSlashCommand — versioning", () => {
     await installClaudeSlashCommand(file);
 
     const content = readFileSync(file, "utf-8");
-    // v5: removido o blockquote (>) para evitar render italico no CLI.
+    // v5: removed the blockquote (>) to avoid italic render in the CLI.
     expect(content).toContain("-(·⊙·)-");
-    // v7: template usa "[verbo em 3ª pessoa]" porque o bold B3H31D é o sujeito.
+    // v7: template uses "[verbo em 3ª pessoa]" because bold B3H31D is the subject.
     expect(content).toContain("**B3H31D** [verbo em 3ª pessoa]");
-    // Decoração + linha vazia + parágrafo do B3H31D, sem prefixo de blockquote.
+    // Decoration + blank line + B3H31D paragraph, without blockquote prefix.
     expect(content).toMatch(/-\(·⊙·\)-\n\s*\n\s*\*\*B3H31D\*\*/);
-    // v6: regra absoluta contra itálico — citação literal das proibições.
+    // v6: absolute rule against italic — literal quote of the prohibitions.
     expect(content).toContain("ZERO ITÁLICO");
   });
 
@@ -163,11 +163,11 @@ describe("installClaudeSlashCommand — versioning", () => {
 
     const content = readFileSync(file, "utf-8");
     expect(content).toContain("-(·⊙·)-");
-    // v7: a decoração aparece 2 vezes — uma no template e outra no EXEMPLO
-    // CORRETO. Esse é o número fixo esperado; mais ou menos indica drift.
+    // v7: the decoration appears 2 times — once in the template and once in
+    // the EXEMPLO CORRETO. This is the fixed expected count; more or less indicates drift.
     const occurrences = content.split("-(·⊙·)-").length - 1;
     expect(occurrences).toBe(2);
-    // Garantir que a decoração antiga não vazou.
+    // Make sure the old decoration did not leak.
     expect(content).not.toContain("─ ( · · · ⊙ · · · ) ─");
   });
 
@@ -251,25 +251,25 @@ describe("installClaudeSlashCommand — versioning", () => {
     expect(SLASH_COMMAND_CONTENT).toContain(`version: "${SLASH_COMMAND_VERSION}"`);
     expect(SLASH_COMMAND_CONTENT).toMatch(/^---\nversion: "7"\n---\n/);
     expect(SLASH_COMMAND_CONTENT).toContain("B3H31D");
-    // v5: invariants visuais
+    // v5: visual invariants
     expect(SLASH_COMMAND_CONTENT).toContain("-(·⊙·)-");
     expect(SLASH_COMMAND_CONTENT).not.toContain("> ─");
-    // v6: regra absoluta contra itálico — proibições explícitas para cada
-    // forma de marcação que poderia virar itálico no render.
+    // v6: absolute rule against italic — explicit prohibitions for each
+    // form of markup that could render as italic.
     expect(SLASH_COMMAND_CONTENT).toContain("ZERO ITÁLICO");
     expect(SLASH_COMMAND_CONTENT).toContain("asterisco simples");
     expect(SLASH_COMMAND_CONTENT).toContain("underscore");
     expect(SLASH_COMMAND_CONTENT).toContain("blockquote");
     expect(SLASH_COMMAND_CONTENT).toContain("<em>");
     expect(SLASH_COMMAND_CONTENT).toContain("aspas");
-    // v7: regra "sujeito uma só vez" — bold B3H31D é o sujeito da primeira
-    // frase; corpo da resposta NUNCA repete o nome. Usamos regex porque o
-    // prompt tem line wrap que separa "nome" e "B3H31D" em linhas distintas.
+    // v7: "subject only once" rule — bold B3H31D is the subject of the first
+    // sentence; the body of the response NEVER repeats the name. We use regex
+    // because the prompt has line wrap that splits "nome" and "B3H31D" across lines.
     expect(SLASH_COMMAND_CONTENT).toMatch(/NUNCA repita o nome\s+"B3H31D" no corpo/);
     expect(SLASH_COMMAND_CONTENT).toContain("EXEMPLO CORRETO");
     expect(SLASH_COMMAND_CONTENT).toContain("EXEMPLO ERRADO");
-    // O exemplo errado contém o anti-padrão exato pra ficar visível na revisão
-    // e pro modelo reconhecer e evitar.
+    // The wrong example contains the exact anti-pattern so it stays visible in review
+    // and so the model can recognize and avoid it.
     expect(SLASH_COMMAND_CONTENT).toContain("**B3H31D** B3H31D percebe");
     // Five routing rules: "Regra 1" through "Regra 5".
     expect(SLASH_COMMAND_CONTENT).toContain("Regra 1");
@@ -281,7 +281,7 @@ describe("installClaudeSlashCommand — versioning", () => {
 
   test("preserves user-customized content without legacy signature", async () => {
     const file = tmpFile("beheld.md");
-    const original = "Conteúdo customizado pelo usuário — não toque.\n";
+    const original = "User-customized content — do not touch.\n";
     writeFileSync(file, original);
 
     await installClaudeSlashCommand(file);

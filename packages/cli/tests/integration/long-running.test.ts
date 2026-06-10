@@ -80,19 +80,19 @@ afterAll(async () => {
   if (tmpDir && existsSync(tmpDir)) rmSync(tmpDir, { recursive: true, force: true });
 });
 
-SUITE("Long-running scenario — produto sobrevive a uso prolongado e restarts", () => {
-  test("end-to-end: 30 sessões, kill -9 engine, restart, contadores rebuildam, doctor verde", async () => {
-    // ── 1. Setup: MCP + engine sobem em ambiente isolado ─────────────────────
+SUITE("Long-running scenario — product survives prolonged use and restarts", () => {
+  test("end-to-end: 30 sessions, kill -9 engine, restart, counters rebuild, doctor green", async () => {
+    // ── 1. Setup: MCP + engine come up in an isolated environment ────────────
     await startEngine();
     await startMcp();
 
-    // ── 2. Estado inicial: zero eventos, ambos healthy ───────────────────────
+    // ── 2. Initial state: zero events, both healthy ──────────────────────────
     const initial = await getStatus(MCP_URL);
     expect(initial).not.toBeNull();
     expect(initial!.events_today).toBe(0);
     expect(initial!.sessions_today).toBe(0);
 
-    // ── 3. Simular 30 sessões reais via hooks HTTP ───────────────────────────
+    // ── 3. Simulate 30 real sessions via HTTP hooks ──────────────────────────
     const sessions = await simulateClaudeSessions(MCP_URL, 30);
     expect(sessions.length).toBe(30);
     const totalTracked = sessions.reduce((s, x) => s + x.trackedEvents, 0);

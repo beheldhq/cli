@@ -252,7 +252,7 @@ describe("checkEngine", () => {
     expect(result.runtimePid).toBe(70859);
   });
 
-  test("checkPidFile detecta divergência via runtimePid de checkEngine zumbi", async () => {
+  test("checkPidFile detects mismatch via zombie checkEngine runtimePid", async () => {
     fs.writeFileSync(
       path.join(tmpDir, ".beheld", "daemon.pid"),
       JSON.stringify({ mcp: 100, engine: 18518 }),
@@ -375,13 +375,13 @@ describe("evaluateBacklog", () => {
     sessions: Array<{ name: string; size: number; mtime: number }>,
   ) => ({ cursor, sessions, profileDb: null, profileDbWal: null });
 
-  test("sem sessões → ok", async () => {
+  test("no sessions → ok", async () => {
     const { _internal } = await import("../src/commands/doctor");
     const r = _internal.evaluateBacklog(snap(null, []));
     expect(r.severity).toBe("ok");
   });
 
-  test("cursor null + 2 sessões totalizando 1000 B → warn 1000 bytes", async () => {
+  test("cursor null + 2 sessions totalling 1000 B → warn 1000 bytes", async () => {
     const { _internal } = await import("../src/commands/doctor");
     const r = _internal.evaluateBacklog(
       snap(null, [
@@ -393,10 +393,10 @@ describe("evaluateBacklog", () => {
     expect(r.lines.join(" ")).toContain("1000 bytes");
   });
 
-  test("cursor por-arquivo no meio de s2 → soma sessões não cobertas", async () => {
+  test("per-file cursor mid-s2 → sums uncovered sessions", async () => {
     const { _internal } = await import("../src/commands/doctor");
-    // sessions: s1=500, s2=1000, s3=200; cursor cobre s2 até offset 300.
-    // s1 sem offset → 500 unread. s2 → 1000-300 = 700. s3 sem offset → 200.
+    // sessions: s1=500, s2=1000, s3=200; cursor covers s2 up to offset 300.
+    // s1 without offset → 500 unread. s2 → 1000-300 = 700. s3 without offset → 200.
     // Total = 1400.
     const r = _internal.evaluateBacklog(
       snap({ offsets: { "s2.jsonl": 300 }, mtime: 1 }, [
@@ -409,7 +409,7 @@ describe("evaluateBacklog", () => {
     expect(r.lines.join(" ")).toContain("1400 bytes");
   });
 
-  test("cursor cobre todas as sessões → ok", async () => {
+  test("cursor covers all sessions → ok", async () => {
     const { _internal } = await import("../src/commands/doctor");
     const r = _internal.evaluateBacklog(
       snap(
@@ -424,10 +424,10 @@ describe("evaluateBacklog", () => {
     expect(r.severity).toBe("ok");
   });
 
-  test("offsets stale para arquivos removidos não viram negativos", async () => {
+  test("stale offsets for removed files do not become negative", async () => {
     const { _internal } = await import("../src/commands/doctor");
-    // ghost.jsonl está no cursor mas não em sessions[] → ignorado.
-    // s1 com offset > size também não vira backlog negativo.
+    // ghost.jsonl is in the cursor but not in sessions[] → ignored.
+    // s1 with offset > size also does not turn into negative backlog.
     const r = _internal.evaluateBacklog(
       snap(
         { offsets: { "ghost.jsonl": 999, "s1.jsonl": 700 }, mtime: 1 },
@@ -447,13 +447,13 @@ describe("evaluateCursorStaleness", () => {
     sessions: Array<{ name: string; size: number; mtime: number }>,
   ) => ({ cursor, sessions, profileDb: null, profileDbWal: null });
 
-  test("sem sessões → ok", async () => {
+  test("no sessions → ok", async () => {
     const { _internal } = await import("../src/commands/doctor");
     const r = _internal.evaluateCursorStaleness(snapWith(null, []), 0, FIVE_MIN);
     expect(r.severity).toBe("ok");
   });
 
-  test("cursor null + sessões → warn, hint beheld start", async () => {
+  test("cursor null + sessions → warn, hint beheld start", async () => {
     const { _internal } = await import("../src/commands/doctor");
     const r = _internal.evaluateCursorStaleness(
       snapWith(null, [{ name: "s.jsonl", size: 100, mtime: 1 }]),
@@ -464,7 +464,7 @@ describe("evaluateCursorStaleness", () => {
     expect(r.hint).toContain("beheld start");
   });
 
-  test("cursor recente → ok", async () => {
+  test("recent cursor → ok", async () => {
     const { _internal } = await import("../src/commands/doctor");
     const newest = 10_000_000;
     const r = _internal.evaluateCursorStaleness(
@@ -477,7 +477,7 @@ describe("evaluateCursorStaleness", () => {
     expect(r.severity).toBe("ok");
   });
 
-  test("cursor parado há 10min → warn", async () => {
+  test("cursor stuck for 10min → warn", async () => {
     const { _internal } = await import("../src/commands/doctor");
     const newest = 10_000_000;
     const r = _internal.evaluateCursorStaleness(
@@ -488,7 +488,7 @@ describe("evaluateCursorStaleness", () => {
       FIVE_MIN,
     );
     expect(r.severity).toBe("warn");
-    expect(r.lines.join(" ")).toContain("Cursor parado há 10min");
+    expect(r.lines.join(" ")).toContain("cursor stuck for 10min");
   });
 });
 
@@ -501,19 +501,19 @@ describe("evaluateDbWrite", () => {
     sessions: Array<{ name: string; size: number; mtime: number }>,
   ) => ({ cursor: null, sessions, profileDb, profileDbWal: null });
 
-  test("profile.db ausente → warn", async () => {
+  test("missing profile.db → warn", async () => {
     const { _internal } = await import("../src/commands/doctor");
     const r = _internal.evaluateDbWrite(snapWith(null, []), 0, FIVE_MIN);
     expect(r.severity).toBe("warn");
   });
 
-  test("sem sessões → ok", async () => {
+  test("no sessions → ok", async () => {
     const { _internal } = await import("../src/commands/doctor");
     const r = _internal.evaluateDbWrite(snapWith({ mtime: 1 }, []), 0, FIVE_MIN);
     expect(r.severity).toBe("ok");
   });
 
-  test("db recente → ok", async () => {
+  test("recent db → ok", async () => {
     const { _internal } = await import("../src/commands/doctor");
     const newest = 10_000_000;
     const r = _internal.evaluateDbWrite(
@@ -524,7 +524,7 @@ describe("evaluateDbWrite", () => {
     expect(r.severity).toBe("ok");
   });
 
-  test("db estagnado → warn", async () => {
+  test("stale db → warn", async () => {
     const { _internal } = await import("../src/commands/doctor");
     const newest = 10_000_000;
     const r = _internal.evaluateDbWrite(
@@ -574,10 +574,10 @@ describe("evaluateWal", () => {
   });
 });
 
-// ── takeProcessingSnapshot (integração, com BEHELD_DATA_DIR) ─────────────────
+// ── takeProcessingSnapshot (integration, with BEHELD_DATA_DIR) ───────────────
 
 describe("takeProcessingSnapshot", () => {
-  test("monta snapshot do tmpdir com cursor, sessões, profile.db e WAL", async () => {
+  test("builds snapshot from tmpdir with cursor, sessions, profile.db and WAL", async () => {
     const base = path.join(tmpDir, ".beheld");
     fs.writeFileSync(
       path.join(base, ".cursor"),
@@ -585,7 +585,7 @@ describe("takeProcessingSnapshot", () => {
     );
     fs.writeFileSync(path.join(base, "sessions", "a.jsonl"), "x".repeat(150));
     fs.writeFileSync(path.join(base, "sessions", "b.jsonl"), "y".repeat(300));
-    // arquivo não-.jsonl deve ser ignorado
+    // non-.jsonl file must be ignored
     fs.writeFileSync(path.join(base, "sessions", "index.json"), "{}");
     fs.writeFileSync(path.join(base, "profile.db"), "sqlite-stub");
     fs.writeFileSync(path.join(base, "profile.db-wal"), Buffer.alloc(2048));
@@ -600,7 +600,7 @@ describe("takeProcessingSnapshot", () => {
     expect(s.profileDbWal).toEqual({ size: 2048 });
   });
 
-  test("ausência de .cursor / profile.db / WAL não lança", async () => {
+  test("missing .cursor / profile.db / WAL does not throw", async () => {
     const { _internal } = await import("../src/commands/doctor");
     const s = await _internal.takeProcessingSnapshot();
     expect(s.cursor).toBeNull();
@@ -760,22 +760,22 @@ describe("readLogTail", () => {
 // ── checkLogSignatures (integration via BEHELD_DATA_DIR) ─────────────────────
 
 describe("checkLogSignatures", () => {
-  test("log ausente → ok", async () => {
+  test("missing log → ok", async () => {
     const { _internal } = await import("../src/commands/doctor");
     const r = _internal.checkLogSignatures();
     expect(r.severity).toBe("ok");
-    expect(r.lines.join(" ")).toContain("ainda não criado");
+    expect(r.lines.join(" ")).toContain("not created yet");
   });
 
-  test("log limpo → ok", async () => {
-    fs.writeFileSync(path.join(tmpDir, ".beheld", "daemon.log"), "tudo normal aqui\n");
+  test("clean log → ok", async () => {
+    fs.writeFileSync(path.join(tmpDir, ".beheld", "daemon.log"), "everything normal here\n");
     const { _internal } = await import("../src/commands/doctor");
     const r = _internal.checkLogSignatures();
     expect(r.severity).toBe("ok");
-    expect(r.lines.join(" ")).toContain("Nenhuma assinatura conhecida");
+    expect(r.lines.join(" ")).toContain("no known signatures");
   });
 
-  test("log com Errno 48 → warn + hint da primeira assinatura", async () => {
+  test("log with Errno 48 → warn + hint of first signature", async () => {
     fs.writeFileSync(
       path.join(tmpDir, ".beheld", "daemon.log"),
       "ERROR:    [Errno 48] error while attempting to bind on address ('127.0.0.1', 7338): address already in use\n".repeat(
@@ -788,7 +788,7 @@ describe("checkLogSignatures", () => {
     const joined = r.lines.join(" ");
     expect(joined).toContain("Errno 48");
     expect(joined).toContain("×12");
-    expect(r.hint).toContain("Socket preso");
+    expect(r.hint).toContain("socket stuck");
   });
 });
 
@@ -797,7 +797,7 @@ describe("checkLogSignatures", () => {
 describe("isInequivocalBusyLoop", () => {
   const FIVE_MIN = 5 * 60 * 1000;
 
-  // Helpers para montar inputs sintéticos sem repetição.
+  // Helpers to build synthetic inputs without repetition.
   const proc = (overrides: Partial<{ stat: string; cpuPct: number; etime: string }> = {}) => ({
     stat: "R+",
     cpuPct: 541.4,
@@ -827,7 +827,7 @@ describe("isInequivocalBusyLoop", () => {
     profileDbWal: null,
   });
 
-  test("4 condições satisfeitas → true", async () => {
+  test("4 conditions met → true", async () => {
     const { _internal } = await import("../src/commands/doctor");
     const newest = 10_000_000;
     expect(
@@ -839,7 +839,7 @@ describe("isInequivocalBusyLoop", () => {
     ).toBe(true);
   });
 
-  test("sem listener → false", async () => {
+  test("no listener → false", async () => {
     const { _internal } = await import("../src/commands/doctor");
     const newest = 10_000_000;
     expect(
@@ -863,7 +863,7 @@ describe("isInequivocalBusyLoop", () => {
     ).toBe(false);
   });
 
-  test("sem proc (ps falhou) → false", async () => {
+  test("no proc (ps failed) → false", async () => {
     const { _internal } = await import("../src/commands/doctor");
     const newest = 10_000_000;
     const e = engine();
@@ -871,7 +871,7 @@ describe("isInequivocalBusyLoop", () => {
     expect(_internal.isInequivocalBusyLoop(e, snap(newest - 10 * 60 * 1000, newest), FIVE_MIN)).toBe(false);
   });
 
-  test("STAT sem R → false", async () => {
+  test("STAT without R → false", async () => {
     const { _internal } = await import("../src/commands/doctor");
     const newest = 10_000_000;
     expect(
@@ -883,7 +883,7 @@ describe("isInequivocalBusyLoop", () => {
     ).toBe(false);
   });
 
-  test("CPU = 50 (não estritamente >) → false", async () => {
+  test("CPU = 50 (not strictly >) → false", async () => {
     const { _internal } = await import("../src/commands/doctor");
     const newest = 10_000_000;
     expect(
@@ -908,7 +908,7 @@ describe("isInequivocalBusyLoop", () => {
     ).toBe(false);
   });
 
-  test("lag = threshold (não estritamente >) → false", async () => {
+  test("lag = threshold (not strictly >) → false", async () => {
     const { _internal } = await import("../src/commands/doctor");
     const newest = 10_000_000;
     expect(
@@ -940,7 +940,7 @@ describe("humanStepLabel + firstFailedStepHint", () => {
     const { _internal } = await import("../src/commands/doctor");
     expect(_internal.humanStepLabel({ name: "kill-engine", ok: true, detail: "PID 70859" })).toContain("PID 70859");
     expect(_internal.humanStepLabel({ name: "wal-checkpoint", ok: true })).toContain("WAL checkpoint");
-    expect(_internal.humanStepLabel({ name: "restart-daemon", ok: false, detail: "x" })).toContain("não religou");
+    expect(_internal.humanStepLabel({ name: "restart-daemon", ok: false, detail: "x" })).toContain("did not restart");
     expect(_internal.humanStepLabel({ name: "capture-stack", ok: true, detail: "/tmp/x" })).toContain("/tmp/x");
   });
 

@@ -141,7 +141,7 @@ describe("renderCoachText — live mode", () => {
 // ── no patterns ──────────────────────────────────────────────────────────────
 
 describe("renderCoachText — live with no patterns", () => {
-  test("says 'sem padrões observáveis'", () => {
+  test("says 'no observable patterns'", () => {
     const out = stripAnsi(renderCoachText(noPatternsPayload));
     expect(out).toContain("Sem padrões observáveis");
   });

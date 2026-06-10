@@ -507,7 +507,7 @@ describe("selfHealClaudeIntegration", () => {
     expect(healed.mcpServerRestored).toBe(true);
 
     // Slash command content — frontmatter + greeting + routing rules.
-    // Pin dinâmico evita atualização manual a cada bump da versão.
+    // Dynamic pin avoids manual updates on every version bump.
     const slashContent = readFileSync(commandFile(), "utf8");
     const { SLASH_COMMAND_VERSION } = await import("../src/config/hooks");
     expect(slashContent).toContain(`version: "${SLASH_COMMAND_VERSION}"`);
@@ -611,7 +611,7 @@ describe("view readiness gate", () => {
     const output = await new Response(proc.stdout).text();
     const exit = await proc.exited;
     expect(exit).toBe(1);
-    expect(output).toContain("nenhum score cacheado");
+    expect(output).toContain("no cached score");
   }, 15000);
 
   test("view with cached scores (source=cache) never shows collecting screen", async () => {
@@ -663,7 +663,7 @@ describe("scoresCurrent offline fallback", () => {
     const output = await new Response(proc.stdout).text();
     const exit = await proc.exited;
     expect(exit).toBe(1);
-    expect(output).toContain("nenhum score cacheado");
+    expect(output).toContain("no cached score");
   }, 15000);
 
   test("view shows cache warning when engine offline but DB has scores", async () => {
@@ -745,9 +745,9 @@ describe("viewCommand orphan detection", () => {
 
   // Engine offline path: engineStatus() + 4 data calls each have a 3s network
   // timeout — total wall time ≥ 6s; override Bun's 5s default.
-  test("view --refresh prints 'já está atualizado' when engine is offline (no orphans detected)", async () => {
+  test("view --refresh prints 'already up to date' when engine is offline (no orphans detected)", async () => {
     // When engine is offline, engineStatus returns null → hasOrphans = false
-    // --refresh with no orphans prints "Nenhum evento pendente" message
+    // --refresh with no orphans prints "No pending events" message
     const proc = Bun.spawn(
       ["bun", "run", "packages/cli/src/index.ts", "view", "--refresh"],
       { cwd: repoRoot, stdout: "pipe", stderr: "pipe" },
@@ -755,7 +755,7 @@ describe("viewCommand orphan detection", () => {
     const output = await new Response(proc.stdout).text();
     await proc.exited;
     // Engine offline → no orphans → should print up-to-date message, then profile
-    expect(output).toContain("atualizado");
+    expect(output).toContain("up to date");
   }, 15000);
 
   test("view without --refresh does not mention 'refresh' when engine is offline", async () => {
@@ -766,20 +766,20 @@ describe("viewCommand orphan detection", () => {
     const output = await new Response(proc.stdout).text();
     await proc.exited;
     // No orphans detected (engine offline → null status) → no warning shown
-    expect(output).not.toContain("eventos não processados");
+    expect(output).not.toContain("pending events");
   }, 15000);
 });
 
 // ── B1: daemon already-running detection ─────────────────────────────────────
 
-describe("daemon start — já em execução", () => {
+describe("daemon start — already running", () => {
   const originalFetch = globalThis.fetch;
 
   afterEach(() => {
     globalThis.fetch = originalFetch;
   });
 
-  test("isMcpRunning retorna true quando porta 7337 responde 200", async () => {
+  test("isMcpRunning returns true when port 7337 responds 200", async () => {
     globalThis.fetch = mock(async (url: string | URL | Request) => {
       if (String(url).includes(":7337/health")) return new Response("{}", { status: 200 });
       throw new Error("unexpected url");
@@ -789,14 +789,14 @@ describe("daemon start — já em execução", () => {
     expect(await isMcpRunning()).toBe(true);
   });
 
-  test("isMcpRunning retorna false quando porta 7337 recusa conexão", async () => {
+  test("isMcpRunning returns false when port 7337 refuses connection", async () => {
     globalThis.fetch = mock(async () => { throw new Error("ECONNREFUSED"); }) as typeof fetch;
 
     const { isMcpRunning } = await import("../src/daemon-manager");
     expect(await isMcpRunning()).toBe(false);
   });
 
-  test("isEngineRunning retorna true quando porta 7338 responde 200", async () => {
+  test("isEngineRunning returns true when port 7338 responds 200", async () => {
     globalThis.fetch = mock(async (url: string | URL | Request) => {
       if (String(url).includes(":7338/health")) return new Response("{}", { status: 200 });
       throw new Error("unexpected url");
@@ -806,14 +806,14 @@ describe("daemon start — já em execução", () => {
     expect(await isEngineRunning()).toBe(true);
   });
 
-  test("isEngineRunning retorna false quando porta 7338 recusa conexão", async () => {
+  test("isEngineRunning returns false when port 7338 refuses connection", async () => {
     globalThis.fetch = mock(async () => { throw new Error("ECONNREFUSED"); }) as typeof fetch;
 
     const { isEngineRunning } = await import("../src/daemon-manager");
     expect(await isEngineRunning()).toBe(false);
   });
 
-  test("start() retorna alreadyRunning:true quando ambas as portas respondem", async () => {
+  test("start() returns alreadyRunning:true when both ports respond", async () => {
     globalThis.fetch = mock(async () => new Response("{}", { status: 200 })) as typeof fetch;
 
     const { start } = await import("../src/daemon-manager");
@@ -823,7 +823,7 @@ describe("daemon start — já em execução", () => {
     expect(result.engine).toBe(true);
   });
 
-  test("start() não chama ensureEngine quando ambos já estão rodando", async () => {
+  test("start() does not call ensureEngine when both are already running", async () => {
     let fetchCallCount = 0;
     globalThis.fetch = mock(async () => {
       fetchCallCount++;
@@ -837,14 +837,14 @@ describe("daemon start — já em execução", () => {
     expect(result.alreadyRunning).toBe(true);
   });
 
-  test("isMcpRunning retorna false quando porta responde com status != 200", async () => {
+  test("isMcpRunning returns false when port responds with status != 200", async () => {
     globalThis.fetch = mock(async () => new Response("error", { status: 500 })) as typeof fetch;
 
     const { isMcpRunning } = await import("../src/daemon-manager");
     expect(await isMcpRunning()).toBe(false);
   });
 
-  test("isEngineRunning retorna false quando o servidor demora mais que o timeout", async () => {
+  test("isEngineRunning returns false when the server takes longer than the timeout", async () => {
     globalThis.fetch = mock((_url: string | URL | Request, init?: RequestInit) => {
       return new Promise<Response>((_resolve, reject) => {
         const signal = init?.signal;
@@ -865,7 +865,7 @@ describe("daemon start — já em execução", () => {
     const result = await isEngineRunning();
     const elapsed = Date.now() - t0;
     expect(result).toBe(false);
-    // Timeout interno é 1s; permitir folga de schedulers lentos
+    // Internal timeout is 1s; allow slack for slow schedulers
     expect(elapsed).toBeLessThan(2500);
   });
 });
@@ -882,7 +882,7 @@ describe("codesignEngine — macOS", () => {
     return { fn, calls };
   }
 
-  test("executa xattr e codesign quando ambos disponíveis", async () => {
+  test("runs xattr and codesign when both are available", async () => {
     const { codesignEngine } = await import("../src/engine-extractor");
     const { fn, calls } = makeSpawn(0);
     codesignEngine("/tmp/fake-engine", fn);
@@ -892,7 +892,7 @@ describe("codesignEngine — macOS", () => {
     expect(cmds).toContain("codesign");
   });
 
-  test("xattr é chamado com -d com.apple.quarantine", async () => {
+  test("xattr is called with -d com.apple.quarantine", async () => {
     const { codesignEngine } = await import("../src/engine-extractor");
     const { fn, calls } = makeSpawn(0);
     codesignEngine("/tmp/fake-engine", fn);
@@ -903,7 +903,7 @@ describe("codesignEngine — macOS", () => {
     expect(xattrCall).toContain("/tmp/fake-engine");
   });
 
-  test("codesign é chamado com --sign - --force", async () => {
+  test("codesign is called with --sign - --force", async () => {
     const { codesignEngine } = await import("../src/engine-extractor");
     const { fn, calls } = makeSpawn(0);
     codesignEngine("/tmp/fake-engine", fn);
@@ -915,13 +915,13 @@ describe("codesignEngine — macOS", () => {
     expect(csCall).toContain("/tmp/fake-engine");
   });
 
-  test("não lança exceção se codesign retorna status != 0 (non-fatal)", async () => {
+  test("does not throw if codesign returns status != 0 (non-fatal)", async () => {
     const { codesignEngine } = await import("../src/engine-extractor");
     const { fn } = makeSpawn(1);
     expect(() => codesignEngine("/tmp/fake-engine", fn)).not.toThrow();
   });
 
-  test("não executa codesign se nenhum comando disponível (which sempre retorna 1)", async () => {
+  test("does not run codesign if no command is available (which always returns 1)", async () => {
     const { codesignEngine } = await import("../src/engine-extractor");
     const calls: string[] = [];
     const fn = mock((cmd: string) => {
@@ -932,17 +932,17 @@ describe("codesignEngine — macOS", () => {
     expect(calls).not.toContain("codesign");
   });
 
-  test("ensureEngine é uma função exportada", async () => {
+  test("ensureEngine is an exported function", async () => {
     const { ensureEngine } = await import("../src/engine-extractor");
     expect(typeof ensureEngine).toBe("function");
   });
 
-  test("isCommandAvailable retorna false para comando inexistente", async () => {
+  test("isCommandAvailable returns false for nonexistent command", async () => {
     const { isCommandAvailable } = await import("../src/engine-extractor");
     expect(isCommandAvailable("beheld-nonexistent-xyz")).toBe(false);
   });
 
-  test("isCommandAvailable retorna true para 'sh' (sempre disponível)", async () => {
+  test("isCommandAvailable returns true for 'sh' (always available)", async () => {
     const { isCommandAvailable } = await import("../src/engine-extractor");
     expect(isCommandAvailable("sh")).toBe(true);
   });
@@ -950,8 +950,8 @@ describe("codesignEngine — macOS", () => {
 
 // ── Secure permissions ────────────────────────────────────────────────────────
 
-describe("permissões seguras do diretório ~/.beheld", () => {
-  test("cria diretório com permissão 0700", () => {
+describe("secure permissions on ~/.beheld directory", () => {
+  test("creates directory with permission 0700", () => {
     const tmpBase = mkdtempSync(join(tmpdir(), "beheld-test-"));
     const beheldDir = join(tmpBase, ".beheld");
 
@@ -963,7 +963,7 @@ describe("permissões seguras do diretório ~/.beheld", () => {
     rmSync(tmpBase, { recursive: true });
   });
 
-  test("ensureSecurePermissions corrige diretório com 0755", async () => {
+  test("ensureSecurePermissions fixes directory with 0755", async () => {
     const tmpDir = mkdtempSync(join(tmpdir(), "beheld-perm-"));
     chmodSync(tmpDir, 0o755);
     expect(statSync(tmpDir).mode & 0o777).toBe(0o755);
@@ -980,7 +980,7 @@ describe("permissões seguras do diretório ~/.beheld", () => {
 // ── Autostart templates ───────────────────────────────────────────────────────
 
 describe("autostart — templates de LaunchAgent e systemd", () => {
-  test("LaunchAgent usa beheld start em vez de server", async () => {
+  test("LaunchAgent uses beheld start instead of server", async () => {
     const { generateLaunchAgentPlist } = await import("../src/daemon-manager");
     const plist = generateLaunchAgentPlist(
       "/usr/local/bin/beheld",
@@ -1000,7 +1000,7 @@ describe("autostart — templates de LaunchAgent e systemd", () => {
     expect(plist).not.toMatch(/<key>KeepAlive<\/key>\s*<true\/>/);
   });
 
-  test("systemd service usa beheld start em vez de server", async () => {
+  test("systemd service uses beheld start instead of server", async () => {
     const { generateSystemdService } = await import("../src/daemon-manager");
     const service = generateSystemdService(
       "/usr/local/bin/beheld",
@@ -1010,7 +1010,7 @@ describe("autostart — templates de LaunchAgent e systemd", () => {
     expect(service).not.toContain("beheld server");
   });
 
-  test("systemd service é Type=oneshot com RemainAfterExit", async () => {
+  test("systemd service is Type=oneshot with RemainAfterExit", async () => {
     const { generateSystemdService } = await import("../src/daemon-manager");
     const service = generateSystemdService(
       "/usr/local/bin/beheld",
@@ -1024,10 +1024,10 @@ describe("autostart — templates de LaunchAgent e systemd", () => {
 
 // ── B7: view --json/--scores-only stdout/stderr separation ───────────────────
 
-describe("view --json e --scores-only não poluem stdout com warnings", () => {
+describe("view --json and --scores-only do not pollute stdout with warnings", () => {
   const repoRoot = join(import.meta.dir, "../../..");
 
-  test("view --json retorna JSON puro no stdout (sem warnings)", async () => {
+  test("view --json returns pure JSON on stdout (no warnings)", async () => {
     const proc = Bun.spawn(
       ["bun", "run", "packages/cli/src/index.ts", "view", "--json"],
       { cwd: repoRoot, stdout: "pipe", stderr: "pipe" },
@@ -1039,10 +1039,10 @@ describe("view --json e --scores-only não poluem stdout com warnings", () => {
     // Stdout must be parseable JSON — no warning text mixed in
     expect(() => JSON.parse(stdout)).not.toThrow();
     expect(stdout).not.toContain("⚠️");
-    expect(stdout).not.toContain("não processados");
+    expect(stdout).not.toContain("pending events");
   }, 15000);
 
-  test("view --json coloca warnings no stderr, não no stdout", async () => {
+  test("view --json puts warnings on stderr, not stdout", async () => {
     const proc = Bun.spawn(
       ["bun", "run", "packages/cli/src/index.ts", "view", "--json"],
       { cwd: repoRoot, stdout: "pipe", stderr: "pipe" },
@@ -1055,12 +1055,12 @@ describe("view --json e --scores-only não poluem stdout com warnings", () => {
     // stdout must be valid JSON regardless of whether warnings are present
     expect(() => JSON.parse(stdout)).not.toThrow();
     // If there were orphan warnings, they belong in stderr
-    if (stderr.includes("não processados")) {
-      expect(stdout).not.toContain("não processados");
+    if (stderr.includes("pending events")) {
+      expect(stdout).not.toContain("pending events");
     }
   }, 15000);
 
-  test("view --scores-only não polui stdout com warnings", async () => {
+  test("view --scores-only does not pollute stdout with warnings", async () => {
     const proc = Bun.spawn(
       ["bun", "run", "packages/cli/src/index.ts", "view", "--scores-only"],
       { cwd: repoRoot, stdout: "pipe", stderr: "pipe" },
@@ -1071,7 +1071,7 @@ describe("view --json e --scores-only não poluem stdout com warnings", () => {
     ]);
     // stdout must contain only space-separated numbers — no warning text
     expect(stdout).not.toContain("⚠️");
-    expect(stdout).not.toContain("não processados");
+    expect(stdout).not.toContain("pending events");
     expect(stdout.trim()).toMatch(/^[\d\s]+$/);
   }, 15000);
 });
@@ -1088,9 +1088,9 @@ describe("installClaudeSlashCommand", () => {
     expect(content).toContain("beheld");
   });
 
-  test("preserva arquivo com conteúdo existente", async () => {
+  test("preserves file with existing content", async () => {
     const tmpFile = join(tmpdir(), `beheld-existing-${Date.now()}.md`);
-    const original = "conteúdo customizado pelo usuário";
+    const original = "user-customized content";
     writeFileSync(tmpFile, original);
 
     await installClaudeSlashCommand(tmpFile);
@@ -1099,7 +1099,7 @@ describe("installClaudeSlashCommand", () => {
     expect(content).toBe(original);
   });
 
-  test("cria arquivo se não existe", async () => {
+  test("creates file if it does not exist", async () => {
     const tmpFile = join(tmpdir(), `beheld-new-${Date.now()}.md`);
 
     await installClaudeSlashCommand(tmpFile);

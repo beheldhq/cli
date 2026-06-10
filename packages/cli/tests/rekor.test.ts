@@ -131,26 +131,26 @@ describe("ed25519HexToPem", () => {
 
 describe("submitToRekor — failure classification", () => {
   // ── Test-pollution caveat (documented; not a production bug) ──
-  // Os dois testes abaixo são CORRETOS quando rodados em isolamento
-  // (`bun test ./packages/cli/tests/rekor.test.ts` → 15/15 pass), mas
-  // falham determinísticamente quando a suite completa é executada
-  // (`bun test ./packages/cli/tests/`). A causa é state global do
-  // @sigstore/sign ou de fetch/DNS que algum teste anterior (provável
-  // candidato: testes que setam globals do crypto ou interceptam
-  // fetch) deixa em estado de aceitar inputs malformados como
-  // sucessos. `r.ok` retorna `true` quando deveria retornar `false`.
+  // The two tests below are CORRECT when run in isolation
+  // (`bun test ./packages/cli/tests/rekor.test.ts` → 15/15 pass), but
+  // fail deterministically when the full suite runs
+  // (`bun test ./packages/cli/tests/`). The cause is global state from
+  // @sigstore/sign or fetch/DNS that some earlier test (likely
+  // suspect: tests that set crypto globals or intercept fetch) leaves
+  // in a state where malformed inputs are accepted as successes.
+  // `r.ok` returns `true` when it should return `false`.
   //
-  // Impacto em produção: ZERO. O caminho `encoding` é gateado em
-  // `lib/rekor.ts:188-190` antes de qualquer network — código está
-  // correto e validado manualmente. O caminho `network` cai em
-  // `classifyError` em `lib/rekor.ts:160-162` (ECONNREFUSED /
-  // ENOTFOUND / ENETUNREACH) e funciona em uso real.
+  // Production impact: ZERO. The `encoding` path is gated in
+  // `lib/rekor.ts:188-190` before any network — the code is
+  // correct and manually validated. The `network` path falls through
+  // `classifyError` in `lib/rekor.ts:160-162` (ECONNREFUSED /
+  // ENOTFOUND / ENETUNREACH) and works in real use.
   //
-  // Marcado como `.skip` (não `.todo`) com este comentário ancorado
-  // para sinalizar que o teste descreve um contrato real, só não é
-  // executável dentro da suite atual. Fix proper requer `vi.resetModules()`
-  // ou test-runner com isolation por arquivo — fora de scope para R*.
-  // Issue de tracking: ver `beheld-refundacao-status.md` §D-05 (a criar).
+  // Marked as `.skip` (not `.todo`) with this anchor comment
+  // to signal that the test describes a real contract — it just is
+  // not runnable inside the current suite. Proper fix requires `vi.resetModules()`
+  // or a test runner with per-file isolation — out of scope for R*.
+  // Tracking issue: see `beheld-refundacao-status.md` §D-05 (to be created).
   test.skip("reason='encoding' when public key hex is not 32 bytes (pollution flaky)", async () => {
     const { priv } = await ephemeralKey();
     const r = await submitToRekor({

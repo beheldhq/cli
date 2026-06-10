@@ -54,31 +54,31 @@ const SAMPLE: CachedAttestation = {
 };
 
 describe("identity status", () => {
-  test("sem attestation cacheada → orienta o usuário a rodar identity link", async () => {
+  test("without cached attestation → tells user to run identity link", async () => {
     await identityStatusCommand();
     const all = logs.join("\n");
-    expect(all).toContain("não vinculada");
+    expect(all).toContain("not linked");
     expect(all).toContain("beheld identity link");
   });
 
-  test("com attestation cacheada → mostra @login, id, platform_key_id e attested_at", async () => {
+  test("with cached attestation → shows @login, id, platform_key_id and attested_at", async () => {
     saveAttestationCache(SAMPLE);
     await identityStatusCommand();
     const all = logs.join("\n");
-    expect(all).toContain("vinculada");
+    expect(all).toContain("linked");
     expect(all).toContain("@octocat");
     expect(all).toContain("id=12345");
     expect(all).toContain("beheld-platform-2026-q2");
     expect(all).toContain("2026-05-19T18:00:00Z");
   });
 
-  test("usa dataDir override (test seam) em vez de BEHELD_DATA_DIR", async () => {
+  test("uses dataDir override (test seam) instead of BEHELD_DATA_DIR", async () => {
     const altDir = mkdtempSync(join(tmpdir(), "beheld-identity-alt-"));
     try {
-      // No file in altDir → must report "não vinculada" mesmo com SAMPLE em workDir
+      // No file in altDir → must report "not linked" even with SAMPLE in workDir
       saveAttestationCache(SAMPLE);
       await identityStatusCommand({ dataDir: altDir });
-      expect(logs.join("\n")).toContain("não vinculada");
+      expect(logs.join("\n")).toContain("not linked");
     } finally {
       rmSync(altDir, { recursive: true, force: true });
     }
@@ -86,7 +86,7 @@ describe("identity status", () => {
 });
 
 describe("identity link", () => {
-  test("é o mesmo comando de `beheld attest` — função delega sem nova implementação", async () => {
+  test("is the same command as `beheld attest` — function delegates without a new implementation", async () => {
     // We don't exercise the full OAuth flow here (it needs a live server),
     // but we assert the alias is wired: identityLinkCommand must be the same
     // export shape as attestCommand (one optional opts argument).

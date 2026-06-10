@@ -42,29 +42,29 @@ const SAMPLE: CachedAttestation = {
 };
 
 describe("attestation-cache", () => {
-  test("loadAttestationCache retorna null quando não existe", () => {
+  test("loadAttestationCache returns null when missing", () => {
     expect(loadAttestationCache()).toBeNull();
   });
 
-  test("save + load roundtrip preserva o conteúdo exato", () => {
+  test("save + load roundtrip preserves exact content", () => {
     saveAttestationCache(SAMPLE);
     expect(loadAttestationCache()).toEqual(SAMPLE);
   });
 
-  test("save grava no path esperado dentro de BEHELD_DATA_DIR/.beheld", () => {
+  test("save writes to expected path inside BEHELD_DATA_DIR/.beheld", () => {
     saveAttestationCache(SAMPLE);
     const expected = join(workDir, ".beheld", "attestation.json");
     expect(existsSync(expected)).toBe(true);
     expect(attestationCachePath()).toBe(expected);
   });
 
-  test("save aplica perms 0600 ao arquivo", () => {
+  test("save applies 0600 perms to file", () => {
     saveAttestationCache(SAMPLE);
     const mode = statSync(attestationCachePath()).mode & 0o777;
     expect(mode).toBe(0o600);
   });
 
-  test("loadAttestationCache retorna null pra arquivo corrompido", () => {
+  test("loadAttestationCache returns null for corrupted file", () => {
     saveAttestationCache(SAMPLE);
     Bun.write(attestationCachePath(), "not json {{");
     // Bun.write is async — use sync version
@@ -73,13 +73,13 @@ describe("attestation-cache", () => {
     expect(loadAttestationCache()).toBeNull();
   });
 
-  test("clearAttestationCache remove o arquivo e retorna true", () => {
+  test("clearAttestationCache removes the file and returns true", () => {
     saveAttestationCache(SAMPLE);
     expect(clearAttestationCache()).toBe(true);
     expect(existsSync(attestationCachePath())).toBe(false);
   });
 
-  test("clearAttestationCache retorna false quando não há arquivo", () => {
+  test("clearAttestationCache returns false when no file exists", () => {
     expect(clearAttestationCache()).toBe(false);
   });
 });

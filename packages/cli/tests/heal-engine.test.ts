@@ -18,11 +18,11 @@ afterEach(() => {
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });
 
-// Helpers — engine snapshot e processing snapshot mínimos do gate.
+// Helpers — minimal engine snapshot and processing snapshot for the gate.
 function engineLike() {
   return {
     severity: "crit" as const,
-    label: "Scoring engine (porta 7338)",
+    label: "Scoring engine (port 7338)",
     lines: [],
     runtimePid: 70859,
     proc: { stat: "R+", cpuPct: 541.4, etime: "06-16:42:35" },
@@ -41,7 +41,7 @@ function snapLike(cursorMtime = 1_000, newest = 1_000 + 10 * 60 * 1000) {
 // ── Happy path ───────────────────────────────────────────────────────────────
 
 describe("selfHealEngine — happy path", () => {
-  test("todas as probes ok → succeeded:true e 7 steps registrados", async () => {
+  test("all probes ok → succeeded:true and 7 steps recorded", async () => {
     const { selfHealEngine } = await import("../src/commands/heal-engine");
     const calls: string[] = [];
     const report = await selfHealEngine(engineLike(), snapLike(), {
@@ -57,11 +57,11 @@ describe("selfHealEngine — happy path", () => {
     expect(report.succeeded).toBe(true);
     expect(report.steps).toHaveLength(7);
     expect(report.steps.every((s) => s.ok)).toBe(true);
-    // Ordem das chamadas deve refletir a sequência da spec.
+    // Call order must reflect the spec sequence.
     expect(calls).toEqual(["capture", "kill", "wait", "wal", "clear", "restart"]);
   });
 
-  test("evidence reflete os valores literais do engine/snapshot", async () => {
+  test("evidence reflects literal engine/snapshot values", async () => {
     const { selfHealEngine } = await import("../src/commands/heal-engine");
     const snap = snapLike(1_000, 1_000 + 7 * 60 * 1000); // 7 min lag
     const report = await selfHealEngine(engineLike(), snap, {
@@ -84,8 +84,8 @@ describe("selfHealEngine — happy path", () => {
 
 // ── Best-effort steps (stack, wal, clear) ────────────────────────────────────
 
-describe("selfHealEngine — stack indisponível não bloqueia", () => {
-  test("captureStack=false → succeeded:true (best-effort não conta)", async () => {
+describe("selfHealEngine — unavailable stack does not block", () => {
+  test("captureStack=false → succeeded:true (best-effort does not count)", async () => {
     const { selfHealEngine } = await import("../src/commands/heal-engine");
     const report = await selfHealEngine(engineLike(), snapLike(), {
       captureStack: async () => false,
@@ -98,18 +98,18 @@ describe("selfHealEngine — stack indisponível não bloqueia", () => {
     const stackStep = report.steps.find((s) => s.name === "capture-stack")!;
     expect(stackStep.ok).toBe(false);
     expect(stackStep.detail).toBeTruthy();
-    // Best-effort: capture-stack falho NÃO derruba succeeded — os 5 passos
-    // críticos (kill/wait/wal/clear/restart) todos ok mantêm o veredito final.
+    // Best-effort: failed capture-stack does NOT bring down succeeded — the 5
+    // critical steps (kill/wait/wal/clear/restart) all ok keep the final verdict.
     expect(report.succeeded).toBe(true);
     expect(report.steps.find((s) => s.name === "kill-engine")!.ok).toBe(true);
     expect(report.steps.find((s) => s.name === "restart-daemon")!.ok).toBe(true);
   });
 });
 
-// ── Curto-circuito em kill / wait ────────────────────────────────────────────
+// ── Short-circuit on kill / wait ─────────────────────────────────────────────
 
-describe("selfHealEngine — kill falha", () => {
-  test("killProcess=false → 4–7 marcados como 'abortado por falha anterior'", async () => {
+describe("selfHealEngine — kill fails", () => {
+  test("killProcess=false → 4–7 marked as 'aborted due to previous failure'", async () => {
     const { selfHealEngine } = await import("../src/commands/heal-engine");
     let walCalled = false;
     let restartCalled = false;
@@ -124,7 +124,7 @@ describe("selfHealEngine — kill falha", () => {
     expect(report.succeeded).toBe(false);
     expect(walCalled).toBe(false);
     expect(restartCalled).toBe(false);
-    const aborted = report.steps.filter((s) => s.detail === "abortado por falha anterior");
+    const aborted = report.steps.filter((s) => s.detail === "aborted due to previous failure");
     expect(aborted.map((s) => s.name)).toEqual([
       "wait-socket-release",
       "wal-checkpoint",
@@ -134,8 +134,8 @@ describe("selfHealEngine — kill falha", () => {
   });
 });
 
-describe("selfHealEngine — socket não libera", () => {
-  test("waitSocketRelease=false → 5–7 abortados", async () => {
+describe("selfHealEngine — socket does not release", () => {
+  test("waitSocketRelease=false → 5–7 aborted", async () => {
     const { selfHealEngine } = await import("../src/commands/heal-engine");
     let walCalled = false;
     const report = await selfHealEngine(engineLike(), snapLike(), {
@@ -148,7 +148,7 @@ describe("selfHealEngine — socket não libera", () => {
     });
     expect(report.succeeded).toBe(false);
     expect(walCalled).toBe(false);
-    const aborted = report.steps.filter((s) => s.detail === "abortado por falha anterior");
+    const aborted = report.steps.filter((s) => s.detail === "aborted due to previous failure");
     expect(aborted.map((s) => s.name)).toEqual([
       "wal-checkpoint",
       "clear-stale-engine-pid",
@@ -157,10 +157,10 @@ describe("selfHealEngine — socket não libera", () => {
   });
 });
 
-// ── WAL falha não bloqueia 6 e 7 ─────────────────────────────────────────────
+// ── WAL failure does not block 6 and 7 ───────────────────────────────────────
 
-describe("selfHealEngine — WAL checkpoint falha", () => {
-  test("walCheckpoint={ok:false} → clear e restart continuam", async () => {
+describe("selfHealEngine — WAL checkpoint fails", () => {
+  test("walCheckpoint={ok:false} → clear and restart continue", async () => {
     const { selfHealEngine } = await import("../src/commands/heal-engine");
     let clearCalled = false;
     let restartCalled = false;
@@ -177,14 +177,14 @@ describe("selfHealEngine — WAL checkpoint falha", () => {
     expect(report.steps.find((s) => s.name === "wal-checkpoint")!.ok).toBe(false);
     expect(report.steps.find((s) => s.name === "clear-stale-engine-pid")!.ok).toBe(true);
     expect(report.steps.find((s) => s.name === "restart-daemon")!.ok).toBe(true);
-    expect(report.succeeded).toBe(false); // succeeded = todos ok
+    expect(report.succeeded).toBe(false); // succeeded = all ok
   });
 });
 
-// ── Restart falha ────────────────────────────────────────────────────────────
+// ── Restart fails ────────────────────────────────────────────────────────────
 
-describe("selfHealEngine — restart falha", () => {
-  test("restartDaemon={ok:false} → passos anteriores ok, succeeded:false", async () => {
+describe("selfHealEngine — restart fails", () => {
+  test("restartDaemon={ok:false} → previous steps ok, succeeded:false", async () => {
     const { selfHealEngine } = await import("../src/commands/heal-engine");
     const report = await selfHealEngine(engineLike(), snapLike(), {
       captureStack: async () => true,
@@ -192,11 +192,11 @@ describe("selfHealEngine — restart falha", () => {
       waitSocketRelease: async () => true,
       walCheckpoint: async () => ({ ok: true }),
       clearStaleEnginePid: () => true,
-      restartDaemon: async () => ({ ok: false, detail: "engine não respondeu" }),
+      restartDaemon: async () => ({ ok: false, detail: "engine did not respond" }),
     });
     expect(report.succeeded).toBe(false);
     expect(report.steps.find((s) => s.name === "restart-daemon")!.ok).toBe(false);
-    // Tudo antes do restart ficou ok.
+    // Everything before restart stayed ok.
     const before = report.steps.filter((s) => s.name !== "restart-daemon");
     expect(before.every((s) => s.ok)).toBe(true);
   });
@@ -205,7 +205,7 @@ describe("selfHealEngine — restart falha", () => {
 // ── clearStaleEnginePid (default) ────────────────────────────────────────────
 
 describe("clearStaleEnginePid (default)", () => {
-  test("preserva campo mcp ao remover engine", async () => {
+  test("preserves mcp field when removing engine", async () => {
     fs.writeFileSync(
       path.join(tmpDir, ".beheld", "daemon.pid"),
       JSON.stringify({ mcp: 100, engine: 18518 }),
@@ -218,7 +218,7 @@ describe("clearStaleEnginePid (default)", () => {
     expect(after).toEqual({ mcp: 100 });
   });
 
-  test("ausência do arquivo retorna true (nada a limpar)", async () => {
+  test("missing file returns true (nothing to clear)", async () => {
     const { clearStaleEnginePid } = await import("../src/commands/heal-engine");
     expect(clearStaleEnginePid()).toBe(true);
   });
@@ -227,7 +227,7 @@ describe("clearStaleEnginePid (default)", () => {
 // ── walCheckpoint (default) ──────────────────────────────────────────────────
 
 describe("walCheckpoint (default)", () => {
-  test("executa em DB válido e retorna ok:true", async () => {
+  test("runs on a valid DB and returns ok:true", async () => {
     const { Database } = await import("bun:sqlite");
     const dbPath = path.join(tmpDir, ".beheld", "profile.db");
     const setup = new Database(dbPath);
@@ -239,26 +239,26 @@ describe("walCheckpoint (default)", () => {
     expect(r.ok).toBe(true);
   });
 
-  test("DB inexistente cria arquivo vazio e retorna ok:true (bun:sqlite cria)", async () => {
-    // O bun:sqlite cria o arquivo se não existir; o checkpoint num WAL vazio é no-op
-    // e retorna ok. Esta é a degradação aceitável definida no design.
+  test("missing DB creates empty file and returns ok:true (bun:sqlite creates)", async () => {
+    // bun:sqlite creates the file if it does not exist; checkpoint on an empty WAL is a no-op
+    // and returns ok. This is the acceptable degradation defined in the design.
     const { walCheckpoint } = await import("../src/commands/heal-engine");
     const r = await walCheckpoint(path.join(tmpDir, ".beheld", "ghost.db"));
     expect(r.ok).toBe(true);
   });
 });
 
-// ── Pré-condições do gate (defensive) ────────────────────────────────────────
+// ── Gate preconditions (defensive) ───────────────────────────────────────────
 
-describe("selfHealEngine — invariantes", () => {
-  test("sem runtimePid → throw", async () => {
+describe("selfHealEngine — invariants", () => {
+  test("missing runtimePid → throw", async () => {
     const { selfHealEngine } = await import("../src/commands/heal-engine");
     const e = engineLike() as { runtimePid?: number };
     delete e.runtimePid;
     await expect(selfHealEngine(e as never, snapLike())).rejects.toThrow();
   });
 
-  test("sem proc → throw", async () => {
+  test("missing proc → throw", async () => {
     const { selfHealEngine } = await import("../src/commands/heal-engine");
     const e = engineLike() as { proc?: unknown };
     delete e.proc;

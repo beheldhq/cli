@@ -30,10 +30,10 @@ function envFor(lang: Lang, tty: boolean) {
   return { tty, color: false, lang, termWidth: 80 };
 }
 
-// ── Append-only: garantir que NÃO há redraw, alt buffer, ou cursor magic ────
+// ── Append-only: ensure NO redraw, alt buffer, or cursor magic ──────────────
 
 describe("runInstall — append-only", () => {
-  test("não emite nenhum escape de redraw ou alt buffer", async () => {
+  test("emits no redraw or alt-buffer escape", async () => {
     const { runInstall } = await import("../../src/install/runner");
     const w = captureWriter();
     const steps = [
@@ -43,16 +43,16 @@ describe("runInstall — append-only", () => {
     ];
     await runInstall(steps, envFor("en", true), w);
     const out = w.out();
-    // Sem clear screen, sem cursor home, sem alt buffer enter/leave,
-    // sem cursor up. Output é puramente append-only.
+    // No clear screen, no cursor home, no alt buffer enter/leave,
+    // no cursor up. Output is purely append-only.
     expect(out).not.toContain("\x1b[2J");
     expect(out).not.toContain("\x1b[0;0H");
     expect(out).not.toContain("\x1b[?1049h");
     expect(out).not.toContain("\x1b[?1049l");
-    expect(out).not.toMatch(/\x1b\[\d+A/); // cursor up por N
+    expect(out).not.toMatch(/\x1b\[\d+A/); // cursor up by N
   });
 
-  test("opener aparece UMA vez (não é reprintado por step)", async () => {
+  test("opener appears ONCE (not reprinted per step)", async () => {
     const { runInstall } = await import("../../src/install/runner");
     const w = captureWriter();
     const steps = [
@@ -66,7 +66,7 @@ describe("runInstall — append-only", () => {
     expect(matches!.length).toBe(1);
   });
 
-  test("section header impresso só na primeira ocorrência da seção", async () => {
+  test("section header printed only on first occurrence of the section", async () => {
     const { runInstall } = await import("../../src/install/runner");
     const w = captureWriter();
     const steps = [
@@ -82,7 +82,7 @@ describe("runInstall — append-only", () => {
     expect(installHeaders!.length).toBe(1);
   });
 
-  test("cada step gera uma linha visível", async () => {
+  test("each step generates a visible line", async () => {
     const { runInstall } = await import("../../src/install/runner");
     const w = captureWriter();
     const steps = [
@@ -103,7 +103,7 @@ describe("runInstall — append-only", () => {
 // ── lang ─────────────────────────────────────────────────────────────────────
 
 describe("runInstall — lang", () => {
-  test("--lang pt-br produz PT-BR", async () => {
+  test("--lang pt-br produces PT-BR", async () => {
     const { runInstall } = await import("../../src/install/runner");
     const w = captureWriter();
     const steps = [
@@ -130,10 +130,10 @@ describe("runInstall — lang", () => {
   });
 });
 
-// ── Short-circuit em pré-flight / install ────────────────────────────────────
+// ── Short-circuit in pre-flight / install ────────────────────────────────────
 
 describe("runInstall — short-circuit", () => {
-  test("falha em pré-flight aborta steps subsequentes de install", async () => {
+  test("pre-flight failure aborts subsequent install steps", async () => {
     const { runInstall } = await import("../../src/install/runner");
     let installRan = false;
     const steps: Step[] = [
@@ -159,11 +159,11 @@ describe("runInstall — short-circuit", () => {
     expect(installRan).toBe(false);
     expect(report.succeeded).toBe(false);
     expect(report.errors).toHaveLength(1);
-    // Como install não rodou, o header de install nem aparece.
+    // Since install did not run, the install header is not printed.
     expect(w.out()).not.toContain("· install\n");
   });
 
-  test("verify NÃO aborta na primeira falha — todos rodam até o fim", async () => {
+  test("verify does NOT abort on first failure — all run to completion", async () => {
     const { runInstall } = await import("../../src/install/runner");
     let v2Ran = false;
     let v3Ran = false;
@@ -205,7 +205,7 @@ describe("runInstall — short-circuit", () => {
 // ── Closer ───────────────────────────────────────────────────────────────────
 
 describe("runInstall — closer", () => {
-  test("succeeded → closer de sucesso", async () => {
+  test("succeeded → success closer", async () => {
     const { runInstall } = await import("../../src/install/runner");
     const w = captureWriter();
     await runInstall(
@@ -217,7 +217,7 @@ describe("runInstall — closer", () => {
     expect(w.out()).not.toContain("reported error");
   });
 
-  test("error parcial → closer com label do primeiro error", async () => {
+  test("partial error → closer with first error label", async () => {
     const { runInstall } = await import("../../src/install/runner");
     const w = captureWriter();
     const steps: Step[] = [
@@ -236,7 +236,7 @@ describe("runInstall — closer", () => {
 // ── overrideLabel ────────────────────────────────────────────────────────────
 
 describe("overrideLabel", () => {
-  test("substitui o label padrão sem concatenação", async () => {
+  test("replaces the default label without concatenation", async () => {
     const { runInstall } = await import("../../src/install/runner");
     const w = captureWriter();
     const steps: Step[] = [
@@ -256,7 +256,7 @@ describe("overrideLabel", () => {
 // ── InstallReport ────────────────────────────────────────────────────────────
 
 describe("runInstall — InstallReport", () => {
-  test("errors lista step states em ordem", async () => {
+  test("errors lists step states in order", async () => {
     const { runInstall } = await import("../../src/install/runner");
     const steps: Step[] = [
       {
