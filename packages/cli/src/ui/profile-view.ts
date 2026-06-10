@@ -1,0 +1,153 @@
+import type { ProfileData, Scores, ViewFlags } from "../types";
+import { RESET, BOLD, GREEN, YELLOW, RED, DIM, CYAN } from "./styles";
+
+function color(score: number | null): string {
+  // R1.2c — null = dimension absent (PromptQuality with no enrichment,
+  // GrowthRate with <6mo history). Use DIM so it visually reads as
+  // "not observed" rather than as a bad score.
+  if (score === null) return DIM;
+  if (score >= 75) return GREEN;
+  if (score >= 50) return YELLOW;
+  return RED;
+}
+
+function bold(s: string): string {
+  return `${BOLD}${s}${RESET}`;
+}
+
+function bar(score: number, width = 20): string {
+  const filled = Math.max(0, Math.min(width, Math.round((score / 100) * width)));
+  const empty = width - filled;
+  return "█".repeat(filled) + "░".repeat(empty);
+}
+
+function scoreLine(label: string, score: number | null): string {
+  // R1.2c — null score → render "—" in the value slot and an empty bar.
+  // Matches the "dimensão ausente" semantic without crashing on numeric
+  // operations or printing the literal "null".
+  const c = color(score);
+  const padded = label.padEnd(18);
+  if (score === null) {
+    return `  ${padded} ${c}  —${RESET}  ${DIM}${"─".repeat(10)}${RESET}`;
+  }
+  return `  ${padded} ${c}${String(score).padStart(3)}${RESET}  ${c}${bar(score)}${RESET}`;
+}
+
+// ── renderCollecting ──────────────────────────────────────────────────────────
+
+export function renderCollecting(sessionsCount: number, sessionsRequired: number): void {
+  const remaining = sessionsRequired - sessionsCount;
+  const progress = Math.round((sessionsCount / sessionsRequired) * 100);
+  const filled = Math.round((sessionsCount / sessionsRequired) * 20);
+  const b = "█".repeat(filled) + "░".repeat(20 - filled);
+
+  console.log("");
+  console.log("  Beheld — Coletando dados");
+  console.log("");
+  console.log(`  ${b}  ${progress}%`);
+  console.log("");
+  console.log(`  ${sessionsCount} de ${sessionsRequired} sessões coletadas.`);
+  const verb = remaining !== 1 ? "Faltam" : "Falta";
+  const noun = remaining !== 1 ? "sessões" : "sessão";
+  console.log(`  ${verb} ${remaining} ${noun} para gerar seu perfil.`);
+  console.log("");
+  console.log("  Continue usando o Claude Code normalmente.");
+  console.log("  O perfil será gerado automaticamente.");
+  console.log("");
+}
+
+// ── renderProfile ─────────────────────────────────────────────────────────────
+
+export function renderProfile(data: ProfileData, flags: ViewFlags): string {
+  if (flags.json) {
+    return JSON.stringify(data, null, 2);
+  }
+
+  const { scores, summary, insights, session } = data;
+
+  if (flags.scoresOnly) {
+    if (!scores) return "0 0 0 0";
+    // R1.2c — scoresOnly is a machine-readable format. Render null as the
+    // literal string "null" so downstream tooling can distinguish absent
+    // from zero. Padding/positioning preserved (4 space-separated fields).
+    const fmt = (v: number | null): string => (v === null ? "null" : String(v));
+    return [
+      fmt(scores.prompt_quality),
+      fmt(scores.test_maturity),
+      fmt(scores.tech_breadth),
+      fmt(scores.growth_rate),
+    ].join(" ");
+  }
+
+  const lines: string[] = [];
+
+  lines.push("");
+  lines.push(bold(`${CYAN}Beheld${RESET}${BOLD} — your developer profile${RESET}`));
+  lines.push("");
+
+  // ── Scores ─────────────────────────────────────────────────────────────────
+  if (scores) {
+    if (scores.sessions_analyzed === 0) {
+      lines.push(
+        `${DIM}No sessions analyzed yet. Keep using Claude Code — check back after a few sessions.${RESET}`,
+      );
+    } else {
+      lines.push(bold("Scores"));
+      lines.push(scoreLine("Prompt quality", scores.prompt_quality));
+      lines.push(scoreLine("Test maturity", scores.test_maturity));
+      lines.push(scoreLine("Tech breadth", scores.tech_breadth));
+      lines.push(scoreLine("Growth rate", scores.growth_rate));
+      lines.push("");
+      const oc = color(scores.overall);
+      // R1.2c — overall can be null when every dimension is absent.
+      // Render "—/100" with DIM color so the absence reads cleanly.
+      const overallTxt = scores.overall === null ? "—/100" : `${scores.overall}/100`;
+      lines.push(
+        `  ${bold("Overall")}                ${oc}${overallTxt}${RESET}  ${DIM}(${scores.sessions_analyzed} sessions)${RESET}`,
+      );
+    }
+  } else {
+    lines.push(`${DIM}Engine offline — run ${bold("beheld start")} to see scores.${RESET}`);
+  }
+
+  lines.push("");
+
+  // ── Summary ────────────────────────────────────────────────────────────────
+  if (summary && summary.total_sessions > 0) {
+    lines.push(bold("Technical profile"));
+    if (summary.ecosystems.length > 0) {
+      lines.push(`  ${DIM}Ecosystems:${RESET}    ${summary.ecosystems.slice(0, 6).join(", ")}`);
+    }
+    if (summary.platforms.length > 0) {
+      lines.push(`  ${DIM}Platforms:${RESET}     ${summary.platforms.slice(0, 5).join(", ")}`);
+    }
+    const topWorkflow = Object.entries(summary.workflow_distribution)[0];
+    if (topWorkflow) {
+      lines.push(`  ${DIM}Workflow:${RESET}      ${topWorkflow[0]} (${Math.round(topWorkflow[1] * 100)}%)`);
+    }
+    lines.push(`  ${DIM}Total sessions:${RESET} ${summary.total_sessions}`);
+    lines.push("");
+  }
+
+  // ── Insights ───────────────────────────────────────────────────────────────
+  if (insights.length > 0) {
+    lines.push(bold("Insights"));
+    for (const insight of insights) {
+      lines.push(`  • ${insight}`);
+    }
+    lines.push("");
+  }
+
+  // ── Session ────────────────────────────────────────────────────────────────
+  if (session?.active) {
+    lines.push(bold("Current session"));
+    lines.push(`  Duration: ${session.duration_minutes ?? 0} min`);
+    lines.push(`  Events: ${session.event_count ?? 0}`);
+    if (session.tools_used?.length) {
+      lines.push(`  Tools: ${session.tools_used.join(", ")}`);
+    }
+    lines.push("");
+  }
+
+  return lines.join("\n");
+}
