@@ -118,7 +118,7 @@ function makeSigner(privateKey: CryptoKey, publicKeyHex: string): Signer {
   const pubPem = ed25519HexToPem(publicKeyHex);
   return {
     async sign(data: Buffer): Promise<Signature> {
-      const sigBuf = await crypto.subtle.sign({ name: "Ed25519" }, privateKey, data);
+      const sigBuf = await crypto.subtle.sign({ name: "Ed25519" }, privateKey, data as BufferSource);
       return {
         signature: Buffer.from(sigBuf),
         key: { $case: "publicKey", publicKey: pubPem, hint: "" },

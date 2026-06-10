@@ -9,7 +9,7 @@ import { existsSync, statSync, readdirSync } from "node:fs";
 import { homedir, platform, arch } from "node:os";
 import { join } from "node:path";
 import type { Step, StepResult } from "./types";
-import type { WizardEnvironments } from "../ui/wizard";
+import type { WizardEnvironments } from "../types";
 import type { SetupActions } from "../ui/wizard";
 import { engineHealthy, pidListeningOn } from "../util/ports";
 import {

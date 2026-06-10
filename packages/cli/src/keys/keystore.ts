@@ -140,7 +140,7 @@ async function pemPrivateToJwk(pem: string): Promise<Ed25519Jwk> {
   }
   let imported: CryptoKey;
   try {
-    imported = await crypto.subtle.importKey("pkcs8", der, { name: "Ed25519" }, true, ["sign"]);
+    imported = await crypto.subtle.importKey("pkcs8", der as BufferSource, { name: "Ed25519" }, true, ["sign"]);
   } catch (e) {
     throw new Error(`PEM is not a valid Ed25519 PKCS#8 private key: ${String(e)}`);
   }

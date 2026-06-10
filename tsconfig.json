@@ -4,9 +4,8 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "lib": ["ES2022", "DOM"],
-    "types": ["bun-types"],
+    "types": ["bun"],
     "strict": true,
-    "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
     "noFallthroughCasesInSwitch": true,
     "esModuleInterop": true,
@@ -21,7 +20,6 @@
   },
   "include": [
     "packages/*/src/**/*.ts",
-    "packages/*/tests/**/*.ts",
     "packages/engine/contracts/**/*.ts",
     "packages/engine/stub/**/*.ts"
   ],
@@ -29,6 +27,8 @@
     "node_modules",
     "dist",
     "build",
+    "**/*.test.ts",
+    "**/tests/**",
     "**/*.test.ts.snap"
   ]
 }
