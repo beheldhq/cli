@@ -1,0 +1,47 @@
+name: Bug report
+description: Report a defect in the Beheld CLI or MCP server.
+labels: [bug, triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug. Please include the output of `beheld doctor` if at all possible — it captures version, OS, ports, and recent errors automatically.
+  - type: input
+    id: version
+    attributes:
+      label: beheld --version
+      placeholder: "0.5.0"
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: "macOS 15.4 / Ubuntu 24.04 / etc."
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you run, what did you expect, what did you see instead?
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: beheld doctor output
+      render: shell
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log excerpts
+      description: Paste relevant lines from ~/.beheld/daemon.log if applicable. Redact paths and identifiers as needed.
+      render: shell
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope check
+      options:
+        - label: This bug is in the CLI, MCP server, bundle format, or installer — not in the scoring engine.
+          required: true

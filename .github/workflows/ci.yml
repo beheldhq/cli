@@ -1,0 +1,32 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - name: type-check
+        run: bun run lint
+      - name: test
+        run: bun test
+      - name: build (stub engine — no proprietary binary)
+        env:
+          BEHELD_ENGINE_TOKEN: ""
+        run: sh scripts/build.sh
+      - name: smoke
+        run: ./dist/beheld --version

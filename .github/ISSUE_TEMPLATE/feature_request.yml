@@ -1,0 +1,26 @@
+name: Feature request
+description: Propose a change or addition to the Beheld CLI.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What's the underlying problem?
+      description: Describe the situation you're in, not the solution you have in mind.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed direction
+      description: Sketch how you'd address it. Multiple options welcome.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - label: This is about CLI, MCP server, installer, or bundle format — not scoring methodology (those go in beheldhq/engine).

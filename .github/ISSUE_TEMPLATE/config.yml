@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security issue
+    url: https://github.com/beheldhq/cli/security/policy
+    about: Please report security issues via the security policy, not public issues.
+  - name: Documentation question
+    url: https://github.com/beheldhq/docs
+    about: For docs feedback, file in the docs repo.
+  - name: Scoring methodology
+    url: https://github.com/beheldhq/cli/discussions
+    about: Discuss scoring approaches and dimensions in Discussions — engine changes coordinate from there.
