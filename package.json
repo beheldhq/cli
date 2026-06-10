@@ -1,0 +1,38 @@
+{
+  "name": "@beheldhq/cli-workspace",
+  "version": "0.5.0",
+  "private": true,
+  "description": "Beheld CLI monorepo — privacy-first developer profiler",
+  "license": "Apache-2.0",
+  "author": "Beheld, Inc. <hi@beheld.dev>",
+  "homepage": "https://beheld.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/beheldhq/cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/beheldhq/cli/issues"
+  },
+  "workspaces": [
+    "packages/cli",
+    "packages/mcp-server",
+    "packages/engine",
+    "packages/engine/contracts",
+    "packages/engine/stub"
+  ],
+  "engines": {
+    "bun": ">=1.1.0"
+  },
+  "scripts": {
+    "test": "bun test",
+    "build": "sh scripts/build.sh",
+    "build:cli": "bun build packages/cli/src/index.ts --compile --outfile dist/beheld",
+    "fetch:engine": "sh scripts/fetch-engine.sh",
+    "lint": "bun x tsc --noEmit",
+    "stub:engine": "bun run packages/engine/stub/index.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.5.0"
+  }
+}

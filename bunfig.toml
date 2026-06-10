@@ -1,0 +1,9 @@
+[install]
+exact = false
+production = false
+
+[install.lockfile]
+save = true
+
+[test]
+preload = []
