@@ -219,7 +219,7 @@ describe("checkEngine", () => {
       inspectProcess: () => undefined,
     });
     expect(result.severity).toBe("crit");
-    expect(result.lines.join(" ")).toContain("sem listener");
+    expect(result.lines.join(" ")).toContain("no listener");
     expect(result.hint).toContain("beheld start");
     expect(result.runtimePid).toBeUndefined();
   });
@@ -233,8 +233,8 @@ describe("checkEngine", () => {
     });
     expect(result.severity).toBe("crit");
     const joined = result.lines.join(" ");
-    expect(joined).toContain("LISTEN no PID 70859");
-    expect(joined).toContain("Provável busy-loop");
+    expect(joined).toContain("LISTEN on PID 70859");
+    expect(joined).toContain("likely busy-loop");
     expect(result.hint).toContain("kill -9 70859");
     expect(result.runtimePid).toBe(70859);
   });
@@ -247,7 +247,7 @@ describe("checkEngine", () => {
       inspectProcess: () => undefined,
     });
     expect(result.severity).toBe("crit");
-    expect(result.lines.join(" ")).toContain("Processo vivo, HTTP travado");
+    expect(result.lines.join(" ")).toContain("process alive, HTTP stuck");
     expect(result.hint).toContain("restart");
     expect(result.runtimePid).toBe(70859);
   });

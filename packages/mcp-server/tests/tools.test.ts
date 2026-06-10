@@ -213,7 +213,7 @@ describe("beheld tool — engine offline", () => {
     process.env.BEHELD_ENGINE_URL = savedUrl;
     process.env.BEHELD_CACHE_DB = savedDb ?? "";
     expect(text).toContain("engine offline");
-    expect(text).toContain("nenhum score cacheado");
+    expect(text).toContain("no cached scores available");
   });
 });
 

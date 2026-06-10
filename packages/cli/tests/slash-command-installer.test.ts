@@ -109,7 +109,7 @@ describe("installClaudeSlashCommand — versioning", () => {
     expect(content).toContain(`version: "${SLASH_COMMAND_VERSION}"`);
     expect(content).toMatch(/^---\nversion: "7"\n---\n/);
     // v3 had no stack routing — v4 must introduce it.
-    expect(content).toContain("Regra 4 — Stack");
+    expect(content).toContain("Rule 4 — Stack");
   });
 
   test("test_slash_command_version_1_frontmatter_overwritten_on_init", async () => {
@@ -130,14 +130,14 @@ describe("installClaudeSlashCommand — versioning", () => {
     await installClaudeSlashCommand(file);
 
     const content = readFileSync(file, "utf-8");
-    expect(content).toContain("Regra 1 — Modo conversacional b3");
+    expect(content).toContain("Rule 1 — Conversational b3 mode");
     expect(content).toContain('"b3 "');
     expect(content).toContain('"B3 "');
     expect(content).toContain("case-insensitive");
     // b3 must precede import in the routing order so that "b3 import ..." is
     // routed to conversational mode, not to import.
-    const b3Index = content.indexOf("Regra 1");
-    const importIndex = content.indexOf("Regra 2");
+    const b3Index = content.indexOf("Rule 1");
+    const importIndex = content.indexOf("Rule 2");
     expect(b3Index).toBeGreaterThan(-1);
     expect(importIndex).toBeGreaterThan(b3Index);
   });
@@ -149,12 +149,12 @@ describe("installClaudeSlashCommand — versioning", () => {
     const content = readFileSync(file, "utf-8");
     // v5: removed the blockquote (>) to avoid italic render in the CLI.
     expect(content).toContain("-(·⊙·)-");
-    // v7: template uses "[verbo em 3ª pessoa]" because bold B3H31D is the subject.
-    expect(content).toContain("**B3H31D** [verbo em 3ª pessoa]");
+    // v7: template uses "[3rd-person verb]" because bold B3H31D is the subject.
+    expect(content).toContain("**B3H31D** [3rd-person verb]");
     // Decoration + blank line + B3H31D paragraph, without blockquote prefix.
     expect(content).toMatch(/-\(·⊙·\)-\n\s*\n\s*\*\*B3H31D\*\*/);
     // v6: absolute rule against italic — literal quote of the prohibitions.
-    expect(content).toContain("ZERO ITÁLICO");
+    expect(content).toContain("ZERO ITALICS");
   });
 
   test("test_slash_command_content_contains_signal_symbol", async () => {
@@ -164,7 +164,7 @@ describe("installClaudeSlashCommand — versioning", () => {
     const content = readFileSync(file, "utf-8");
     expect(content).toContain("-(·⊙·)-");
     // v7: the decoration appears 2 times — once in the template and once in
-    // the EXEMPLO CORRETO. This is the fixed expected count; more or less indicates drift.
+    // the CORRECT EXAMPLE. This is the fixed expected count; more or less indicates drift.
     const occurrences = content.split("-(·⊙·)-").length - 1;
     expect(occurrences).toBe(2);
     // Make sure the old decoration did not leak.
@@ -186,10 +186,10 @@ describe("installClaudeSlashCommand — versioning", () => {
 
     const content = readFileSync(file, "utf-8");
     expect(content).toContain(
-      "Meu nome é B3H31D. Vou testemunhar a evolução do perfil de [nome].",
+      "My name is B3H31D. I will witness the evolution of [name]'s profile.",
     );
-    expect(content).toContain("[nome]");
-    expect(content).toContain("Antes de qualquer resposta");
+    expect(content).toContain("[name]");
+    expect(content).toContain("Before any response");
     expect(content).not.toMatch(/eduardo/i);
   });
 
@@ -198,17 +198,17 @@ describe("installClaudeSlashCommand — versioning", () => {
     await installClaudeSlashCommand(file);
 
     const content = readFileSync(file, "utf-8");
-    expect(content).toContain("Regra 4 — Stack");
+    expect(content).toContain("Rule 4 — Stack");
     expect(content).toContain('action="stack"');
-    // All four trigger keywords listed in PT-BR for the dev.
+    // All four trigger keywords.
     expect(content).toContain('"stack"');
-    expect(content).toContain('"linguagens"');
+    expect(content).toContain('"languages"');
     expect(content).toContain('"frameworks"');
-    expect(content).toContain('"arquitetura"');
+    expect(content).toContain('"architecture"');
     // Stack must come before the fallback view rule (otherwise the keywords
     // would always be swallowed by view).
-    const stackIdx = content.indexOf("Regra 4 — Stack");
-    const viewIdx = content.indexOf("Regra 5 — View");
+    const stackIdx = content.indexOf("Rule 4 — Stack");
+    const viewIdx = content.indexOf("Rule 5 — View");
     expect(stackIdx).toBeGreaterThan(-1);
     expect(viewIdx).toBeGreaterThan(stackIdx);
   });
@@ -219,10 +219,10 @@ describe("installClaudeSlashCommand — versioning", () => {
 
     const content = readFileSync(file, "utf-8");
     expect(content).toContain('action="import"');
-    expect(content).toContain('url=<url extraída>');
+    expect(content).toContain('url=<extracted url>');
     expect(content).toContain('url=""');
-    expect(content).toContain("Regra 2 — Import com URL");
-    expect(content).toContain("Regra 3 — Import sem URL");
+    expect(content).toContain("Rule 2 — Import with URL");
+    expect(content).toContain("Rule 3 — Import without URL");
   });
 
   test("test_slash_command_view_routing_preserved", async () => {
@@ -232,8 +232,8 @@ describe("installClaudeSlashCommand — versioning", () => {
     const content = readFileSync(file, "utf-8");
     expect(content).toContain('action="view"');
     expect(content).toContain('view="$ARGUMENTS"');
-    // View is now Regra 5 (renumbered when stack was inserted as Regra 4).
-    expect(content).toContain("Regra 5 — View (padrão)");
+    // View is now Rule 5 (renumbered when stack was inserted as Rule 4).
+    expect(content).toContain("Rule 5 — View (default)");
     expect(content).toContain('"summary"');
   });
 
@@ -256,27 +256,27 @@ describe("installClaudeSlashCommand — versioning", () => {
     expect(SLASH_COMMAND_CONTENT).not.toContain("> ─");
     // v6: absolute rule against italic — explicit prohibitions for each
     // form of markup that could render as italic.
-    expect(SLASH_COMMAND_CONTENT).toContain("ZERO ITÁLICO");
-    expect(SLASH_COMMAND_CONTENT).toContain("asterisco simples");
+    expect(SLASH_COMMAND_CONTENT).toContain("ZERO ITALICS");
+    expect(SLASH_COMMAND_CONTENT).toContain("single asterisk");
     expect(SLASH_COMMAND_CONTENT).toContain("underscore");
     expect(SLASH_COMMAND_CONTENT).toContain("blockquote");
     expect(SLASH_COMMAND_CONTENT).toContain("<em>");
-    expect(SLASH_COMMAND_CONTENT).toContain("aspas");
+    expect(SLASH_COMMAND_CONTENT).toContain("quotes");
     // v7: "subject only once" rule — bold B3H31D is the subject of the first
     // sentence; the body of the response NEVER repeats the name. We use regex
-    // because the prompt has line wrap that splits "nome" and "B3H31D" across lines.
-    expect(SLASH_COMMAND_CONTENT).toMatch(/NUNCA repita o nome\s+"B3H31D" no corpo/);
-    expect(SLASH_COMMAND_CONTENT).toContain("EXEMPLO CORRETO");
-    expect(SLASH_COMMAND_CONTENT).toContain("EXEMPLO ERRADO");
+    // because the prompt has line wrap that splits "name" and "B3H31D" across lines.
+    expect(SLASH_COMMAND_CONTENT).toMatch(/NEVER repeat the name\s+"B3H31D" in the body/);
+    expect(SLASH_COMMAND_CONTENT).toContain("CORRECT EXAMPLE");
+    expect(SLASH_COMMAND_CONTENT).toContain("WRONG EXAMPLE");
     // The wrong example contains the exact anti-pattern so it stays visible in review
     // and so the model can recognize and avoid it.
-    expect(SLASH_COMMAND_CONTENT).toContain("**B3H31D** B3H31D percebe");
-    // Five routing rules: "Regra 1" through "Regra 5".
-    expect(SLASH_COMMAND_CONTENT).toContain("Regra 1");
-    expect(SLASH_COMMAND_CONTENT).toContain("Regra 2");
-    expect(SLASH_COMMAND_CONTENT).toContain("Regra 3");
-    expect(SLASH_COMMAND_CONTENT).toContain("Regra 4");
-    expect(SLASH_COMMAND_CONTENT).toContain("Regra 5");
+    expect(SLASH_COMMAND_CONTENT).toContain("**B3H31D** B3H31D notices");
+    // Five routing rules: "Rule 1" through "Rule 5".
+    expect(SLASH_COMMAND_CONTENT).toContain("Rule 1");
+    expect(SLASH_COMMAND_CONTENT).toContain("Rule 2");
+    expect(SLASH_COMMAND_CONTENT).toContain("Rule 3");
+    expect(SLASH_COMMAND_CONTENT).toContain("Rule 4");
+    expect(SLASH_COMMAND_CONTENT).toContain("Rule 5");
   });
 
   test("preserves user-customized content without legacy signature", async () => {

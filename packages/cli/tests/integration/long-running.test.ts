@@ -166,7 +166,7 @@ SUITE("Long-running scenario — product survives prolonged use and restarts", (
     // What MUST hold is: MCP and engine are reported healthy with the right
     // versions, and the actual listening PIDs are echoed back.
     const doctorOk = runCli(["doctor"], env);
-    expect(doctorOk.stdout).toContain("Respondendo em /health (v0.4.1)");
+    expect(doctorOk.stdout).toContain("responding on /health (v0.5.0)");
     expect(doctorOk.stdout).toContain("v0.0.0-fake");
     expect(doctorOk.stdout).toContain(String(enginePidAfter));
     // No crit-level engine/mcp issues: those are the lines that actually

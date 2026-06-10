@@ -148,8 +148,8 @@ describe("runImport — interactive loop", () => {
       pollIntervalMs: 1,
     });
     expect(importCalls.length).toBe(0);
-    expect(logs.join("\n")).toContain("Bootstrap concluído");
-    expect(logs.join("\n")).toContain("0 repositório(s) · 0 commits analisados");
+    expect(logs.join("\n")).toContain("Bootstrap complete");
+    expect(logs.join("\n")).toContain("0 repository(ies) · 0 commits analyzed");
   });
 
   test("shows progress during polling (multiple status calls)", async () => {
@@ -171,7 +171,7 @@ describe("runImport — interactive loop", () => {
     });
     expect(statusCalls.value).toBeGreaterThanOrEqual(2);
     expect(logs.join("\n")).toContain("12 commits");
-    expect(logs.join("\n")).toContain("adicionado ao L1");
+    expect(logs.join("\n")).toContain("added to L1");
   });
 
   test("handles author_not_found gracefully and continues the loop", async () => {
@@ -197,9 +197,9 @@ describe("runImport — interactive loop", () => {
       pollIntervalMs: 1,
     });
     const out = logs.join("\n");
-    expect(out).toContain("Já presente no L1");
-    expect(out).toContain("Bootstrap concluído");
-    expect(out).toContain("0 repositório(s)");
+    expect(out).toContain("Already in L1");
+    expect(out).toContain("Bootstrap complete");
+    expect(out).toContain("0 repository(ies)");
   });
 
   test("handles clone_error and reports the detail", async () => {
@@ -211,7 +211,7 @@ describe("runImport — interactive loop", () => {
       pollIntervalMs: 1,
     });
     const out = logs.join("\n");
-    expect(out).toContain("Erro ao acessar o repositório");
+    expect(out).toContain("error accessing repository");
     expect(out).toContain("auth required");
   });
 
@@ -233,7 +233,7 @@ describe("runImport — interactive loop", () => {
     expect(importCalls.length).toBe(2);
     expect(importCalls[0].pat).toBeNull();
     expect(importCalls[1].pat).toBe("ghp_TEST_TOKEN");
-    expect(logs.join("\n")).toContain("adicionado ao L1");
+    expect(logs.join("\n")).toContain("added to L1");
   });
 
   test("PAT is not persisted to config.json after use", async () => {
@@ -294,8 +294,8 @@ describe("runImport — interactive loop", () => {
     });
     const out = logs.join("\n");
     // 12 + 30 = 42 commits across 2 repos
-    expect(out).toContain("Bootstrap concluído");
-    expect(out).toContain("2 repositório(s) · 42 commits analisados");
+    expect(out).toContain("Bootstrap complete");
+    expect(out).toContain("2 repository(ies) · 42 commits analyzed");
   });
 });
 
@@ -313,7 +313,7 @@ describe("runImport — --list", () => {
     });
     const out = logs.join("\n");
     expect(out).toContain("HASH");
-    expect(out).toContain("DATA DE IMPORT");
+    expect(out).toContain("IMPORT DATE");
     expect(out).toContain("COMMITS");
     expect(out).toContain("a3f8c1d2");
     expect(out).toContain("2026-05-14");
@@ -327,7 +327,7 @@ describe("runImport — --list", () => {
       io, client,
       config: inMemoryConfig("dev@example.com"),
     });
-    expect(logs.join("\n")).toContain("Nenhum repositório importado");
+    expect(logs.join("\n")).toContain("No repositories imported");
   });
 });
 
@@ -351,7 +351,7 @@ describe("runImport — --remove", () => {
       config: inMemoryConfig("dev@example.com"),
     });
     expect(deleteCalls).toEqual(["a3f8c1d2deadbeef"]);
-    expect(logs.join("\n")).toContain("removido do L1");
+    expect(logs.join("\n")).toContain("removed from L1");
   });
 
   test("reports not-found when the engine returns 404", async () => {

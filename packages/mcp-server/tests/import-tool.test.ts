@@ -144,7 +144,7 @@ describe("handleImport — author email gate", () => {
   test("test_import_action_no_author_email_returns_wizard_hint", async () => {
     const engine = makeEngine();
     const out = await handleImport("https://github.com/u/r", depsWith(engine, null));
-    expect(out).toContain("Email de commit não configurado");
+    expect(out).toContain("Commit email not configured");
     expect(out).toContain("beheld import");
     expect(engine.importCalls.length).toBe(0);
   });
@@ -158,7 +158,7 @@ describe("handleImport — terminal states", () => {
       statusSequence: [done({ status: "needs_pat" })],
     });
     const out = await handleImport("https://github.com/u/r", depsWith(engine));
-    expect(out).toContain("Repositório privado");
+    expect(out).toContain("Private repository");
     expect(out).toContain("https://github.com/u/r");
     expect(out).toContain("beheld import");
   });
@@ -168,7 +168,7 @@ describe("handleImport — terminal states", () => {
       statusSequence: [done({ status: "already_imported", root_commit_hash: "abc" })],
     });
     const out = await handleImport("https://github.com/u/r", depsWith(engine));
-    expect(out).toContain("Já importado");
+    expect(out).toContain("Already imported");
     expect(out).toContain("https://github.com/u/r");
   });
 
@@ -187,7 +187,7 @@ describe("handleImport — terminal states", () => {
       statusSequence: [done({ status: "clone_error", detail: "404" })],
     });
     const out = await handleImport("https://github.com/u/bad", depsWith(engine));
-    expect(out).toContain("Não foi possível clonar");
+    expect(out).toContain("Could not clone");
     expect(out).toContain("https://github.com/u/bad");
   });
 
@@ -211,8 +211,8 @@ describe("handleImport — terminal states", () => {
     expect(out).toContain("847 commits");
     expect(out).toContain("rails, python, docker");
     expect(out).toContain("test ratio: 38%");
-    expect(out).toContain("período: 2019-03 → 2026-05");
-    expect(out).toContain("Perfil atualizado");
+    expect(out).toContain("period: 2019-03 → 2026-05");
+    expect(out).toContain("Profile updated");
   });
 
   test("test_import_action_timeout_returns_background_message", async () => {
@@ -225,7 +225,7 @@ describe("handleImport — terminal states", () => {
       timeoutMs: 5, // budget exhausts immediately
       readAuthorEmail: () => "dev@example.com",
     });
-    expect(out).toContain("Importação em andamento");
+    expect(out).toContain("Import in progress");
     expect(out).toContain("background");
     expect(out).toContain("beheld import --list");
   });
@@ -243,7 +243,7 @@ describe("handleImport — terminal states", () => {
       ],
     });
     const out = await handleImport("https://github.com/u/r", depsWith(engine));
-    expect(out).toContain("Falha na importação");
+    expect(out).toContain("Failed to import");
   });
 });
 

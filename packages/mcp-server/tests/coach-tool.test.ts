@@ -116,9 +116,9 @@ describe("beheld_coach — schema", () => {
     ]);
   });
 
-  test("description contains 'QUANDO NÃO CHAMAR'", async () => {
+  test("description contains 'WHEN NOT TO CALL'", async () => {
     const { beheldCoachTool } = await import("../src/tools/coach-tool");
-    expect(beheldCoachTool.description).toContain("QUANDO NÃO CHAMAR");
+    expect(beheldCoachTool.description).toContain("WHEN NOT TO CALL");
   });
 
   test("description tells the host how to use the JSON block", async () => {
@@ -149,7 +149,7 @@ describe("beheld_coach — live payload", () => {
       "../src/tools/coach-tool?v=live2"
     );
     const out = (await beheldCoachTool.handler({})) as string;
-    expect(out).toContain("Padrões detectados (2)");
+    expect(out).toContain("Patterns detected (2)");
   });
 
   test("text shows score + freshness summary", async () => {
@@ -212,13 +212,13 @@ describe("beheld_coach — live payload", () => {
 // ── empty patterns ──────────────────────────────────────────────────────────
 
 describe("beheld_coach — live with no patterns", () => {
-  test("text says 'sem padrões observáveis'", async () => {
+  test("text says 'no observable patterns'", async () => {
     respondWith = () => noPatternsPayload;
     const { beheldCoachTool } = await import(
       "../src/tools/coach-tool?v=nopat"
     );
     const out = (await beheldCoachTool.handler({})) as string;
-    expect(out).toContain("Sem padrões observáveis");
+    expect(out).toContain("No observable patterns right now");
     // still embeds the JSON block (host LLM still gets guidance)
     expect(out).toContain("---BEHELD-JSON---");
   });

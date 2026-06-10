@@ -173,7 +173,7 @@ describe("renderProfile", () => {
     const flags: ViewFlags = { json: false, scoresOnly: false };
     const zeroScores: Scores = { ...scores, sessions_analyzed: 0 };
     const out = renderProfile({ ...data, scores: zeroScores }, flags);
-    expect(out).toContain("Nenhuma sessão");
+    expect(out).toContain("No sessions analyzed yet");
   });
 
   test("--scores-only with null scores returns '0 0 0 0'", () => {

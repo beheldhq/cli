@@ -407,8 +407,8 @@ describe("snapshotCommand — --share", () => {
     }
 
     const out = logs.join("\n");
-    expect(out).toContain("Snapshot gerado");   // local bundle still produced
-    expect(out).toContain("Falha no upload");
+    expect(out).toContain("Snapshot generated");   // local bundle still produced
+    expect(out).toContain("upload failed");
     expect(out).toContain("HTTP 500");
     expect(exitCalled).toBe(false);
   });
@@ -432,7 +432,7 @@ describe("snapshotCommand — --share", () => {
     } finally {
       console.log = realLog;
     }
-    expect(logs.join("\n")).toContain("conta criada");
+    expect(logs.join("\n")).toContain("account created");
   });
 
   test("does NOT upload when --share is omitted", async () => {
@@ -482,7 +482,7 @@ describe("snapshotListCommand", () => {
     } finally {
       console.log = realLog;
     }
-    expect(logs.join("\n")).toContain("Nenhum snapshot");
+    expect(logs.join("\n")).toContain("No snapshots");
   });
 
   test("prints entries with date, short hash and bundle path", async () => {

@@ -124,7 +124,7 @@ describe("CallTool summary returns formatted profile", () => {
   test("contains score geral header", async () => {
     const { beheldTool } = await import("../src/tools/beheld-tool?v=stdio-sum1");
     const text = (await beheldTool.handler({ view: "summary" })) as string;
-    expect(text).toContain("Score geral");
+    expect(text).toContain("Overall");
   });
 
   test("contains overall score", async () => {

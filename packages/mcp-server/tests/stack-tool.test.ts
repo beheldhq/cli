@@ -188,7 +188,7 @@ describe("formatStackResponse — architecture section", () => {
     // Separated by · (middle dot).
     expect(out).toMatch(/MVC.*·.*Monorepo|Monorepo.*·.*MVC/);
     // Repo-count line cites the max across strong patterns (6).
-    expect(out).toMatch(/Padrões detectados em 6 repositórios/);
+    expect(out).toMatch(/Patterns detected in 6 repositor/);
   });
 
   test("test_stack_format_weak_patterns_in_secondary_block", () => {
@@ -203,11 +203,11 @@ describe("formatStackResponse — architecture section", () => {
       repos_analyzed: 2,
     });
     expect(out).toContain("MVC");
-    expect(out).toContain("Indícios:");
+    expect(out).toContain("Hints:");
     expect(out).toContain("Serverless");
     expect(out).toContain("Event-driven");
     // Weak labels must NOT appear in the main strong block.
-    const indiciosIdx = out.indexOf("Indícios:");
+    const indiciosIdx = out.indexOf("Hints:");
     const serverlessIdx = out.indexOf("Serverless");
     expect(serverlessIdx).toBeGreaterThan(indiciosIdx);
   });
@@ -219,8 +219,8 @@ describe("formatStackResponse — architecture section", () => {
       total_commits_analyzed: 50,
       repos_analyzed: 1,
     });
-    expect(out).toContain("Nenhum padrão de arquitetura identificado.");
-    expect(out).not.toContain("Indícios:");
+    expect(out).toContain("No architecture patterns identified.");
+    expect(out).not.toContain("Hints:");
   });
 });
 

@@ -80,7 +80,7 @@ describe("renderCoachText — live mode", () => {
 
   test("shows pattern count", () => {
     const out = stripAnsi(renderCoachText(livePayload));
-    expect(out).toContain("Padrões (2)");
+    expect(out).toContain("Patterns (2)");
   });
 
   test("shows each pattern label and evidence", () => {
@@ -143,7 +143,7 @@ describe("renderCoachText — live mode", () => {
 describe("renderCoachText — live with no patterns", () => {
   test("says 'no observable patterns'", () => {
     const out = stripAnsi(renderCoachText(noPatternsPayload));
-    expect(out).toContain("Sem padrões observáveis");
+    expect(out).toContain("No observable patterns right now");
   });
 
   test("still shows score footer", () => {
