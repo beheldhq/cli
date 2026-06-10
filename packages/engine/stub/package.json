@@ -1,0 +1,21 @@
+{
+  "name": "@beheld/engine-stub",
+  "version": "0.5.0",
+  "description": "Beheld engine stub — deterministic mock HTTP server that satisfies @beheld/engine-contracts for local CLI development",
+  "license": "Apache-2.0",
+  "main": "index.ts",
+  "scripts": {
+    "start": "bun run index.ts"
+  },
+  "dependencies": {
+    "@beheld/engine-contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/beheldhq/cli.git",
+    "directory": "packages/engine/stub"
+  }
+}

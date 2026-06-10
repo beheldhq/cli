@@ -1,0 +1,12 @@
+{
+  "name": "@beheld/engine",
+  "version": "0.5.0",
+  "description": "Beheld engine — open boundary. Contracts and stub for local development; the proprietary engine lives in beheldhq/engine.",
+  "license": "Apache-2.0",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/beheldhq/cli.git",
+    "directory": "packages/engine"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "@beheld/engine-contracts",
+  "version": "0.5.0",
+  "description": "Beheld engine HTTP contract — TypeScript types describing the engine's localhost API surface",
+  "license": "Apache-2.0",
+  "main": "index.ts",
+  "types": "index.ts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/beheldhq/cli.git",
+    "directory": "packages/engine/contracts"
+  }
+}
