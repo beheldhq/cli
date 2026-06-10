@@ -40,9 +40,9 @@ CLAUDE.md
 
 # Logs and runtime artifacts
 *.log
-log/
-tmp/
-storage/
+/log/
+/tmp/
+/storage/
 
 # Secrets — never commit
 *.key
