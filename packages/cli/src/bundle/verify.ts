@@ -1,0 +1,413 @@
+/**
+ * Offline .beheld verification (Phase 5 / F5.3.8).
+ *
+ * Pure functions — no filesystem, no network. The CLI command at
+ * commands/verify.ts wires these to disk I/O + console output.
+ *
+ * Three independent checks:
+ *   1. schema    — shape sanity (defensive — `verifyBundle` is sometimes given
+ *                  unknown input loaded from disk by a user)
+ *   2. hash      — recomputed SHA-256 of canonical(payload) matches bundle.hash
+ *   3. signature — Ed25519 verify with the embedded public_key
+ *
+ * Optional fourth check via `verifyChain`:
+ *   4. chain     — walks previous_hash recursively, verifying each link
+ */
+import { payloadHash, payloadToCanonical } from "./canonical";
+import type { Bundle, BundlePayload, HarnessSource } from "./types";
+
+// ── manifest (R1.1, spec §3.3) ──────────────────────────────────────────────
+
+/** Detected schema family of a bundle. v7 is current; v6/v5/v1 are accepted
+ *  in read-only fallback so legacy artifacts continue verifying.
+ *  v6 and v7 share the same payload shape (payload.core / payload.enrichment);
+ *  the difference is that v7 allows null in payload.scores.{prompt_quality,
+ *  growth_rate, overall} per spec §7 + R1.2c. Detection uses bundle.version
+ *  string when present, falling back to payload shape inspection. */
+export type DetectedSchema =
+  | "v7"
+  | "v6_legacy"
+  | "v5_legacy"
+  | "v1_legacy"
+  | "unknown";
+
+export interface BundleManifest {
+  /** Programmatic schema family (machine-readable). */
+  schema: DetectedSchema;
+  /** Human-friendly label rendered by the CLI (e.g. "v7", "v6 (legacy)"). */
+  schemaLabel: string;
+  /** Section names actually present in the payload, in canonical order.
+   *  v7/v6: "core" always, "enrichment" when present.
+   *  v5: "l1" always, "l2" when present.
+   *  v1: "signals". */
+  sections: string[];
+  /** Capture fidelity per source, extracted from payload.enrichment.harness_sources.
+   *  Empty array when the bundle is v5/v1 (those schemas had no harness_sources). */
+  harnessSources: HarnessSource[];
+}
+
+function _extractHarnessSources(enrichment: Record<string, unknown>): HarnessSource[] {
+  const hs = enrichment.harness_sources;
+  if (!Array.isArray(hs)) return [];
+  return hs.filter(
+    (s): s is HarnessSource =>
+      !!s &&
+      typeof s === "object" &&
+      typeof (s as HarnessSource).harness === "string" &&
+      typeof (s as HarnessSource).capture_fidelity === "string" &&
+      typeof (s as HarnessSource).sessions === "number",
+  );
+}
+
+/** Pure: detect schema + list sections + extract harness_sources from a Bundle
+ *  (or any record loaded from disk). Never throws — falls through to "unknown"
+ *  when shape is unrecognized. */
+export function summarizeManifest(bundle: Bundle | Record<string, unknown>): BundleManifest {
+  const raw = (bundle as { payload?: Record<string, unknown> }).payload;
+  const payload = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  const version = (bundle as { version?: unknown }).version;
+
+  // Primary detection: bundle.version field when present. v7 and v6 share
+  // payload shape but differ in score nullability semantic, so the version
+  // string is the authoritative discriminator.
+  if (typeof version === "string") {
+    if (version === "7" && "core" in payload) {
+      const sections: string[] = ["core"];
+      let harnessSources: HarnessSource[] = [];
+      const enr = payload.enrichment;
+      if (enr && typeof enr === "object") {
+        sections.push("enrichment");
+        harnessSources = _extractHarnessSources(enr as Record<string, unknown>);
+      }
+      return { schema: "v7", schemaLabel: "v7", sections, harnessSources };
+    }
+    if (version === "6" && "core" in payload) {
+      const sections: string[] = ["core"];
+      let harnessSources: HarnessSource[] = [];
+      const enr = payload.enrichment;
+      if (enr && typeof enr === "object") {
+        sections.push("enrichment");
+        harnessSources = _extractHarnessSources(enr as Record<string, unknown>);
+      }
+      return { schema: "v6_legacy", schemaLabel: "v6 (legacy)", sections, harnessSources };
+    }
+    if (version === "5" && "l1" in payload) {
+      const sections: string[] = ["l1"];
+      if (payload.l2 && typeof payload.l2 === "object") sections.push("l2");
+      return { schema: "v5_legacy", schemaLabel: "v5 (legacy)", sections, harnessSources: [] };
+    }
+    if (version === "1" && "signals" in payload) {
+      return {
+        schema: "v1_legacy",
+        schemaLabel: "v1 (legacy)",
+        sections: ["signals"],
+        harnessSources: [],
+      };
+    }
+    // version field present but mismatched payload shape — fall through to
+    // shape-based detection below.
+  }
+
+  // Secondary: payload shape inspection when bundle.version is missing or
+  // doesn't match. Treats core+enrichment as v6_legacy (most permissive
+  // current schema with the same shape).
+  if ("core" in payload) {
+    const sections: string[] = ["core"];
+    let harnessSources: HarnessSource[] = [];
+    const enr = payload.enrichment;
+    if (enr && typeof enr === "object") {
+      sections.push("enrichment");
+      harnessSources = _extractHarnessSources(enr as Record<string, unknown>);
+    }
+    return { schema: "v6_legacy", schemaLabel: "v6 (legacy)", sections, harnessSources };
+  }
+  if ("l1" in payload) {
+    const sections: string[] = ["l1"];
+    if (payload.l2 && typeof payload.l2 === "object") sections.push("l2");
+    return { schema: "v5_legacy", schemaLabel: "v5 (legacy)", sections, harnessSources: [] };
+  }
+  if ("signals" in payload) {
+    return {
+      schema: "v1_legacy",
+      schemaLabel: "v1 (legacy)",
+      sections: ["signals"],
+      harnessSources: [],
+    };
+  }
+  return { schema: "unknown", schemaLabel: "unknown", sections: [], harnessSources: [] };
+}
+
+export interface CheckResult {
+  ok: boolean;
+  reason?: string;
+}
+
+export interface VerifyResult {
+  ok: boolean;
+  checks: {
+    schema: CheckResult;
+    hash: CheckResult;
+    signature: CheckResult;
+    /** Phase 6 / F6.8 — L1 section presence. `ok=false` here is a warning,
+     *  not a failure: bundles generated before Phase 6 are still valid. */
+    l1_section: CheckResult & { repo_count?: number };
+    /** Phase 6 / F6.8 — L2 section presence. v2 bundles use `l2`; v1 bundles
+     *  use the legacy `signals` key (accepted for backward compatibility). */
+    l2_section: CheckResult & { session_count?: number };
+  };
+  /** Total `ok` excluding the L1 warning — the verifier still passes a bundle
+   *  that has no L1 section as long as schema/hash/signature/l2 are valid. */
+  warnings: string[];
+}
+
+const HASH_RE = /^sha256:[0-9a-f]{64}$/;
+const SIG_RE = /^ed25519:[0-9a-f]{128}$/;
+const PUBKEY_RE = /^ed25519:[A-Za-z0-9_-]+$/;
+
+function isObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+function validateSchema(raw: unknown): CheckResult {
+  if (!isObject(raw)) return { ok: false, reason: "not a JSON object" };
+  if (raw.version === undefined) return { ok: false, reason: "missing 'version'" };
+  if (typeof raw.hash !== "string" || !HASH_RE.test(raw.hash))
+    return { ok: false, reason: "malformed 'hash'" };
+  if (typeof raw.signature !== "string" || !SIG_RE.test(raw.signature))
+    return { ok: false, reason: "malformed 'signature'" };
+  if (typeof raw.public_key !== "string" || !PUBKEY_RE.test(raw.public_key))
+    return { ok: false, reason: "malformed 'public_key'" };
+  if (!isObject(raw.payload)) return { ok: false, reason: "missing or invalid 'payload'" };
+  const payload = raw.payload as Record<string, unknown>;
+  for (const required of ["created_at", "beheld_version", "previous_hash", "scores"]) {
+    if (!(required in payload)) {
+      return { ok: false, reason: `payload missing '${required}'` };
+    }
+  }
+  // Schema discrimination (R1.1):
+  //   v6 → core + enrichment   (current generator)
+  //   v5 → l1   + l2           (Phase 6, pre-rename)
+  //   v1 → signals             (pre-Phase 6)
+  // Verifier accepts all three; the manifest output shows which schema was
+  // detected so consumers can interpret the section labels correctly.
+  const hasV6 = "core" in payload && "enrichment" in payload;
+  const hasV5 = "l1" in payload && "l2" in payload;
+  const hasV1 = "signals" in payload;
+  if (!hasV6 && !hasV5 && !hasV1) {
+    return {
+      ok: false,
+      reason: "payload missing required sections (no 'core'/'enrichment', no 'l1'/'l2', no legacy 'signals')",
+    };
+  }
+  return { ok: true };
+}
+
+interface PayloadView {
+  // v6 (current)
+  core?: { total_repos?: number; root_commit_hashes?: unknown[] };
+  enrichment?: {
+    sessions_analyzed?: number;
+    harness_sources?: Array<{ harness?: string; capture_fidelity?: string; sessions?: number }>;
+  };
+  // v5 legacy
+  l1?: { total_repos?: number; root_commit_hashes?: unknown[] };
+  l2?: { sessions_analyzed?: number };
+  // v1 legacy
+  signals?: { sessions_analyzed?: number };
+}
+
+function validateCoreSection(payload: PayloadView): VerifyResult["checks"]["l1_section"] {
+  // Fallback order: v6 core → v5 l1. Both shapes mirror BundleCoreSection.
+  const core = payload.core ?? payload.l1;
+  if (!core || typeof core !== "object") {
+    return {
+      ok: false,
+      reason: "core section missing — bundle generated by an older Beheld version",
+    };
+  }
+  const count = typeof core.total_repos === "number" ? core.total_repos : 0;
+  return { ok: true, repo_count: count };
+}
+
+function validateEnrichmentSection(payload: PayloadView): VerifyResult["checks"]["l2_section"] {
+  // Fallback order: v6 enrichment → v5 l2 → v1 signals.
+  const enrichment = payload.enrichment ?? payload.l2 ?? payload.signals;
+  if (!enrichment || typeof enrichment !== "object") {
+    return { ok: false, reason: "enrichment section missing (no 'enrichment'/'l2'/'signals')" };
+  }
+  const count = typeof enrichment.sessions_analyzed === "number" ? enrichment.sessions_analyzed : 0;
+  return { ok: true, session_count: count };
+}
+
+async function verifyHash(bundle: Bundle): Promise<CheckResult> {
+  const recomputed = await payloadHash(bundle.payload);
+  if (recomputed === bundle.hash) return { ok: true };
+  return {
+    ok: false,
+    reason: `hash mismatch — expected ${recomputed.slice(0, 24)}…, found ${bundle.hash.slice(0, 24)}…`,
+  };
+}
+
+async function verifySignature(bundle: Bundle): Promise<CheckResult> {
+  const x = bundle.public_key.replace(/^ed25519:/, "");
+  let pubKey: CryptoKey;
+  try {
+    pubKey = await crypto.subtle.importKey(
+      "jwk",
+      { kty: "OKP", crv: "Ed25519", x },
+      { name: "Ed25519" },
+      false,
+      ["verify"],
+    );
+  } catch (e) {
+    return { ok: false, reason: `cannot import public_key: ${(e as Error).message}` };
+  }
+
+  const sigHex = bundle.signature.replace(/^ed25519:/, "");
+  const sigMatches = sigHex.match(/.{2}/g);
+  if (!sigMatches) return { ok: false, reason: "signature not valid hex" };
+  const sigBytes = Uint8Array.from(sigMatches.map((b) => parseInt(b, 16)));
+
+  const canonical = new TextEncoder().encode(payloadToCanonical(bundle.payload));
+
+  let ok: boolean;
+  try {
+    ok = await crypto.subtle.verify({ name: "Ed25519" }, pubKey, sigBytes, canonical);
+  } catch (e) {
+    return { ok: false, reason: `verify threw: ${(e as Error).message}` };
+  }
+  return ok ? { ok: true } : { ok: false, reason: "signature does not match payload" };
+}
+
+export async function verifyBundle(raw: unknown): Promise<VerifyResult> {
+  const skipped: CheckResult = { ok: false, reason: "skipped (schema failed)" };
+  const schema = validateSchema(raw);
+  if (!schema.ok) {
+    return {
+      ok: false,
+      warnings: [],
+      checks: {
+        schema,
+        hash: skipped,
+        signature: skipped,
+        l1_section: { ...skipped },
+        l2_section: { ...skipped },
+      },
+    };
+  }
+  const bundle = raw as Bundle;
+  const hashCheck = await verifyHash(bundle);
+  const sigCheck = hashCheck.ok
+    ? await verifySignature(bundle)
+    : { ok: false, reason: "skipped (hash failed)" };
+
+  const payloadView = (bundle.payload as unknown) as PayloadView;
+  const l1Check = validateCoreSection(payloadView);
+  const l2Check = validateEnrichmentSection(payloadView);
+
+  const warnings: string[] = [];
+  if (!l1Check.ok && l1Check.reason) warnings.push(l1Check.reason);
+
+  // core absence is a warning, not a failure — keep old bundles verifiable.
+  return {
+    ok: schema.ok && hashCheck.ok && sigCheck.ok && l2Check.ok,
+    warnings,
+    checks: { schema, hash: hashCheck, signature: sigCheck, l1_section: l1Check, l2_section: l2Check },
+  };
+}
+
+// ── chain verification ──────────────────────────────────────────────────────
+
+export type BundleResolver = (hash: string) => Promise<Bundle | null>;
+
+export interface ChainResult extends CheckResult {
+  links_verified: number;
+}
+
+const MAX_CHAIN_DEPTH = 1000;
+
+export async function verifyChain(
+  bundle: Bundle,
+  resolve: BundleResolver,
+): Promise<ChainResult> {
+  let current: Bundle = bundle;
+  let links = 0;
+
+  while (current.payload.previous_hash !== null) {
+    if (links >= MAX_CHAIN_DEPTH) {
+      return { ok: false, links_verified: links, reason: "chain too deep — possible cycle" };
+    }
+    const prevHash = current.payload.previous_hash;
+    const prev = await resolve(prevHash);
+    if (!prev) {
+      return {
+        ok: false,
+        links_verified: links,
+        reason: `previous bundle ${prevHash.slice(0, 24)}… not found locally`,
+      };
+    }
+    if (prev.hash !== prevHash) {
+      return {
+        ok: false,
+        links_verified: links,
+        reason: `resolved bundle hash differs from link (resolver returned wrong file?)`,
+      };
+    }
+    const prevResult = await verifyBundle(prev);
+    if (!prevResult.ok) {
+      const failed = Object.entries(prevResult.checks).find(([, v]) => !v.ok);
+      return {
+        ok: false,
+        links_verified: links,
+        reason: `previous bundle ${prevHash.slice(0, 24)}… failed ${failed?.[0]}: ${failed?.[1].reason ?? "?"}`,
+      };
+    }
+    current = prev;
+    links++;
+  }
+
+  return { ok: true, links_verified: links };
+}
+
+// ── helper: extract embedded data for display ───────────────────────────────
+
+export function summarize(payload: BundlePayload): string {
+  const s = payload.scores;
+  return `score ${s.overall}/100 · ${s.sessions_analyzed} sessions · ${payload.created_at.slice(0, 10)}`;
+}
+
+/** Two-line composition string surfaced by `beheld snapshot` and
+ *  `beheld verify`. Falls back when L1 is empty / absent. */
+export function composition(payload: BundlePayload | Record<string, unknown>): {
+  base: string;
+  trajectory: string;
+} {
+  const view = payload as unknown as PayloadView;
+  // R1.1 — read v6 core/enrichment first, fall back to v5 l1/l2 then v1 signals.
+  const core = view.core ?? view.l1;
+  const enrichment = view.enrichment ?? view.l2 ?? view.signals;
+  const sessionCount =
+    typeof enrichment?.sessions_analyzed === "number" ? enrichment.sessions_analyzed : 0;
+  // `period_days` lives on the same shape for v6 (enrichment), v5 (l2), and v1 (signals).
+  const periodDays =
+    typeof (enrichment as { period_days?: number } | undefined)?.period_days === "number"
+      ? (enrichment as { period_days?: number }).period_days!
+      : 0;
+  const trajectory = `${sessionCount} sessions · ${periodDays} days`;
+
+  if (!core || (typeof core.total_repos === "number" && core.total_repos === 0)) {
+    return {
+      base: "not available (run beheld import)",
+      trajectory,
+    };
+  }
+  const repos = typeof core.total_repos === "number" ? core.total_repos : 0;
+  const commits =
+    typeof (core as { total_commits?: number }).total_commits === "number"
+      ? (core as { total_commits?: number }).total_commits!
+      : 0;
+  return {
+    base: `${repos} repositories · ${commits.toLocaleString("en-US")} commits`,
+    trajectory,
+  };
+}
