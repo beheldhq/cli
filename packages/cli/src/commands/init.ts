@@ -6,7 +6,9 @@ import { runWizard } from "../ui/wizard";
 import { installClaudeCodeHooks, installContinueDevMcp, installClaudeSlashCommand, installClaudeMcpServer, migrateProjectScopedRegistrations } from "../config/hooks";
 import * as daemonManager from "../daemon-manager";
 import { ensureSecurePermissions } from "../daemon-manager";
-import type { BeheldConfig } from "../types";
+import { hashInstallId, readInstallId } from "../lib/install-id";
+import { capture } from "../lib/telemetry-client";
+import type { BeheldConfig, TelemetryConfig } from "../types";
 import { VERSION } from "../version";
 
 function configPath(): string {
@@ -31,6 +33,37 @@ async function askReinit(): Promise<boolean> {
       resolve(ans.trim().toLowerCase() === "y");
     });
   });
+}
+
+/**
+ * Asks the user once, during `beheld init`, whether to allow the daily
+ * anonymous ping. Default is Y on TTY, denied on non-interactive runs.
+ * The choice is persisted to config.telemetry in the caller.
+ */
+async function askTelemetryConsent(): Promise<TelemetryConfig> {
+  const now = new Date().toISOString();
+  if (!process.stdin.isTTY) {
+    console.log("Telemetry consent skipped (non-interactive). Run `beheld telemetry enable` to allow.");
+    return { consent: "denied", consented_at: now };
+  }
+
+  console.log("");
+  console.log("─ ( · · · ⊙ · · · ) ─");
+  console.log("B3H31D phones home once a day with: version, OS, architecture.");
+  console.log("Nothing about your work leaves your machine.");
+
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  const answer: string = await new Promise((resolve) => {
+    rl.question("Allow? [Y/n] ", (ans) => {
+      rl.close();
+      resolve(ans.trim().toLowerCase());
+    });
+  });
+
+  if (answer === "n" || answer === "no") {
+    return { consent: "denied", consented_at: now };
+  }
+  return { consent: "granted", consented_at: now };
 }
 
 export async function initCommand(
@@ -91,14 +124,24 @@ export async function initCommand(
     lang,
   );
 
+  const telemetry = await askTelemetryConsent();
+
   const config: BeheldConfig = {
     version: VERSION,
     initialized_at: new Date().toISOString(),
     dimensions: result.dimensions,
     environments: result.environments,
     ...(result.author_email ? { author_email: result.author_email } : {}),
+    telemetry,
   };
 
   mkdirSync(join(homedir(), ".beheld"), { recursive: true, mode: 0o700 });
   writeFileSync(configPath(), JSON.stringify(config, null, 2) + "\n");
+
+  if (telemetry.consent === "granted") {
+    const id = await readInstallId();
+    if (id) {
+      void capture({ distinctId: hashInstallId(id), event: "cli_installed" });
+    }
+  }
 }

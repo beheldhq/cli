@@ -71,6 +71,15 @@ export interface WizardEnvironments {
   continueDev: boolean;
 }
 
+export interface TelemetryConfig {
+  /** "granted" = ping allowed; "denied" = never ping; "unset" = never
+   *  asked (CI / first-run scripts default here). */
+  consent: "granted" | "denied" | "unset";
+  /** ISO-8601 timestamp of when the user answered the consent prompt.
+   *  Null when never asked. */
+  consented_at: string | null;
+}
+
 export interface BeheldConfig {
   version: string;
   initialized_at: string;
@@ -87,6 +96,8 @@ export interface BeheldConfig {
   /** Recovery email registered with the portal on first publish. Local
    *  cache only — the source of truth lives in Account.email_recovery. */
   email_recovery?: string;
+  /** Anonymous platform ping consent. See lib/telemetry-config.ts. */
+  telemetry?: TelemetryConfig;
 }
 
 export interface L1ImportResponse {

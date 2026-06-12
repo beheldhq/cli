@@ -3,6 +3,10 @@ import { Command } from "commander";
 import { maybeShowBundleNudge } from "./lib/nudge";
 import { VERSION } from "./version";
 
+// Imported lazily inside the preAction hook to keep boot fast and to
+// avoid pulling crypto on `beheld -v`.
+type MaybePing = () => Promise<void>;
+
 export { VERSION };
 
 const program = new Command();
@@ -17,6 +21,19 @@ program
 // gates on TTY/session/age internally, so this hook is safe for all actions
 // (init, view, share, etc.).
 program.hook("preAction", () => { try { maybeShowBundleNudge(); } catch { /* never fail a command for a nudge */ } });
+
+// Anonymous daily platform ping — debounced 24h, opt-in via `beheld init`.
+// Fire-and-forget: never blocks the command, never propagates errors.
+// All gating (consent, env vars, last-ping timestamp) lives inside
+// `maybePingActiveDay`. See docs/PRIVACY.md.
+program.hook("preAction", () => {
+  void (async () => {
+    try {
+      const { maybePingActiveDay } = await import("./commands/telemetry") as { maybePingActiveDay: MaybePing };
+      await maybePingActiveDay();
+    } catch { /* telemetry never blocks a command */ }
+  })();
+});
 
 program
   .command("bootstrap")
@@ -285,6 +302,42 @@ program
   .action(async () => {
     const { updateCommand } = await import("./commands/update");
     await updateCommand();
+  });
+
+const telemetryCmd = program
+  .command("telemetry")
+  .description("Manage the anonymous daily platform ping (opt-in, see docs/PRIVACY.md)");
+
+telemetryCmd
+  .command("status")
+  .description("Print whether telemetry is enabled and when the CLI last pinged")
+  .action(async () => {
+    const { telemetryStatusCommand } = await import("./commands/telemetry");
+    await telemetryStatusCommand();
+  });
+
+telemetryCmd
+  .command("enable")
+  .description("Grant consent for the daily anonymous ping")
+  .action(async () => {
+    const { telemetryEnableCommand } = await import("./commands/telemetry");
+    await telemetryEnableCommand();
+  });
+
+telemetryCmd
+  .command("disable")
+  .description("Deny consent. No further pings will be sent.")
+  .action(async () => {
+    const { telemetryDisableCommand } = await import("./commands/telemetry");
+    await telemetryDisableCommand();
+  });
+
+telemetryCmd
+  .command("show")
+  .description("Print the exact payload the CLI would send")
+  .action(async () => {
+    const { telemetryShowCommand } = await import("./commands/telemetry");
+    await telemetryShowCommand();
   });
 
 program
