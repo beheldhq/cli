@@ -1070,6 +1070,11 @@ export async function doctorCommand(): Promise<void> {
   const jsonl = await checkJsonlToday();
   printResult(jsonl);
 
+  // Telemetry status — one-line informational; never affects exit code.
+  const { telemetryStatusForDoctor } = await import("./telemetry");
+  console.log(`${BOLD}🔍 ${telemetryStatusForDoctor().replace("Status: ", "Telemetry:  ")}${RESET}`);
+  console.log("");
+
   // ── summary ────────────────────────────────────────────────────────────────
   const all: CheckResult[] = [
     mcp,
