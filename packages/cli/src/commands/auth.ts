@@ -7,10 +7,14 @@
  *   3. POST /api/v1/auth/challenge { fingerprint } → { nonce }
  *   4. Sign the nonce bytes with the private key
  *   5. POST /api/v1/auth/verify { fingerprint, nonce, signature } → { session_token, redirect_url }
- *   6. Open the dashboard URL in the browser
+ *   6. Persist the session_token to ~/.beheld/session.json (module 2A —
+ *      bearer-token-persistence). Subsequent CLI commands use it via
+ *      `authenticatedFetch` instead of re-running the dance.
+ *   7. Open the dashboard URL in the browser
  */
 import { getPortalUrl } from "../config/env";
 import { loadPublicJwk, loadPrivateKey, keysExist, publicKeyFingerprint } from "../keys/keystore";
+import { writeSession, SESSION_SCHEMA_VERSION } from "../storage/session";
 
 const bold  = (s: string) => `\x1b[1m${s}\x1b[22m`;
 const DIM   = "\x1b[2m";
@@ -84,8 +88,29 @@ export async function authCommand(): Promise<void> {
       console.log(fail(`verification failed: HTTP ${r.status} — ${body.slice(0, 200)}`));
       process.exit(1);
     }
-    const data = await r.json() as { session_token: string; redirect_url: string };
+    const data = await r.json() as {
+      session_token: string;
+      redirect_url: string;
+      expires_at?: string;
+    };
     redirectUrl = `${base}${data.redirect_url}`;
+
+    // Persist the bearer token so future CLI commands can authenticate via
+    // `authenticatedFetch` without re-running the challenge/verify dance.
+    // Module 2A — bearer-token-persistence. Fingerprint is the hex pubkey;
+    // base is the portal/api root the token is valid against.
+    const createdAt = new Date();
+    const expiresAt = data.expires_at
+      ? new Date(data.expires_at)
+      : new Date(createdAt.getTime() + 24 * 60 * 60 * 1000);
+    writeSession({
+      schema_version: SESSION_SCHEMA_VERSION,
+      token: data.session_token,
+      fingerprint: fp,
+      api_base: base,
+      created_at: createdAt.toISOString(),
+      expires_at: expiresAt.toISOString(),
+    });
   } catch (e) {
     console.log(fail(`verification error: ${(e as Error).message}`));
     process.exit(1);
