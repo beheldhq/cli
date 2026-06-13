@@ -44,6 +44,10 @@ import { ok, warn, arrow, meta, bold, brand, DIM, RESET } from "../ui/styles";
 export interface BootstrapOptions {
   /** When true, immediately enter the L1 import wizard after the bridge. */
   import?: boolean;
+  /** When true, skip the notify-channel opt-in prompt silently.
+   *  Maps to CI / piped stdin / `--no-interactive`.
+   *  Module 3 — bootstrap-and-share-prompts. */
+  noInteractive?: boolean;
   /** Internal: override the legacy / target paths (used by tests). */
   paths?: { legacy: string; target: string };
   /** Internal: capture log output instead of stdout (used by tests). */
@@ -59,6 +63,10 @@ export interface BootstrapResult {
   bridge: BridgeResult;
   beheldDir: string;
   importInvited: boolean;
+  /** Outcome of the notify-channel email opt-in prompt (module 3).
+   *  Absent when the parent caller injected its own paths (tests usually
+   *  do, and we don't want the hook firing inside isolated tmpdirs). */
+  notifyHook?: { prompted: boolean; outcome: string };
 }
 
 const HOME_BEHELD = join(homedir(), ".beheld");
@@ -131,5 +139,25 @@ export async function bootstrapCommand(opts: BootstrapOptions = {}): Promise<Boo
     log(meta("Tip: rerun with --import to enter the L1 wizard now."));
   }
 
-  return { bridge, beheldDir: target, importInvited };
+  // ── 4. Notify-channel opt-in (module 3) ─────────────────────────────────
+  // Single optional prompt: notification_email. Lazy bearer (the challenge/
+  // verify dance runs only if the user types an email). Failure is
+  // non-blocking — bootstrap is done either way. Tests that inject custom
+  // paths skip the hook to avoid touching ~/.beheld inside tmpdirs.
+  let notifyHookResult: { prompted: boolean; outcome: string } | undefined;
+  if (!opts.paths) {
+    try {
+      const { runBootstrapNotifyHook } = await import("./notify/bootstrap-hook");
+      const result = await runBootstrapNotifyHook(
+        { noInteractive: opts.noInteractive },
+        { log, warn: (line) => log(warn(line)) },
+      );
+      notifyHookResult = { prompted: result.prompted, outcome: result.outcome };
+    } catch {
+      // Hook failures must never leak above bootstrap — we already advertise
+      // the channel is opt-in. Swallow and move on.
+    }
+  }
+
+  return { bridge, beheldDir: target, importInvited, notifyHook: notifyHookResult };
 }

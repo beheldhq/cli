@@ -195,6 +195,20 @@ export async function runShare(deps: ShareDeps = {}): Promise<ShareOutcome> {
     out(`  ${meta("account created")}`);
   }
 
+  // Post-share secondary opt-in (module 3 — bootstrap-and-share-prompts).
+  // Fires at most once per lifetime, gated on a verified notification_email.
+  // We skip when the caller injected a config path (tests don't want the
+  // hook reading the real ~/.beheld/config.json). Hook failures must never
+  // affect the share exit status — share already succeeded by this point.
+  if (deps.configPath === undefined) {
+    try {
+      const { runShareSecondaryHook } = await import("./notify/share-hook");
+      await runShareSecondaryHook({ log: out });
+    } catch {
+      // intentional — share already succeeded; hook is best-effort.
+    }
+  }
+
   return { ok: true, exitCode: 0, result };
 }
 

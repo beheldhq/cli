@@ -40,9 +40,11 @@ program
   .command("bootstrap")
   .description("R1.4 — L1-first onboarding: migrate legacy ~/.devprofile/, prep ~/.beheld/, point to next steps")
   .option("--import", "After bridging, enter the L1 git-history import wizard immediately")
-  .action(async (opts: { import?: boolean }) => {
+  .option("--no-interactive", "Skip the optional notify-channel email prompt (also: BEHELD_NO_INTERACTIVE=1)")
+  .action(async (opts: { import?: boolean; interactive?: boolean }) => {
     const { bootstrapCommand } = await import("./commands/bootstrap");
-    await bootstrapCommand({ import: opts.import });
+    // commander maps `--no-interactive` to `interactive: false`.
+    await bootstrapCommand({ import: opts.import, noInteractive: opts.interactive === false });
   });
 
 program

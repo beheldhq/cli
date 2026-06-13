@@ -21,6 +21,7 @@ import {
   AuthFlowError,
   type AuthFlowDeps,
 } from "./auth-flow";
+import { acceptLanguageHeader } from "../config/locale";
 import {
   clearSession,
   isSessionExpired,
@@ -115,6 +116,12 @@ async function doFetch(
 ): Promise<Response> {
   const headers = new Headers(init.headers ?? {});
   headers.set("Authorization", `Bearer ${token}`);
+  // Inject Accept-Language so the portal can pick the right template for
+  // any email the request triggers (module 3 — bootstrap-and-share-prompts).
+  // Caller-provided Accept-Language wins; we only set the default.
+  if (!headers.has("Accept-Language")) {
+    headers.set("Accept-Language", acceptLanguageHeader());
+  }
   // Pass through only the standard RequestInit fields; strip our custom one.
   const { skipExpiryRefresh: _drop, ...rest } = init;
   return fetchImpl(url, { ...rest, headers });
