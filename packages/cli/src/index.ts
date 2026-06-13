@@ -1,6 +1,7 @@
 import { Command } from "commander";
 
 import { maybeShowBundleNudge } from "./lib/nudge";
+import { notifyCommand } from "./commands/notify";
 import { VERSION } from "./version";
 
 // Imported lazily inside the preAction hook to keep boot fast and to
@@ -339,6 +340,13 @@ telemetryCmd
     const { telemetryShowCommand } = await import("./commands/telemetry");
     await telemetryShowCommand();
   });
+
+// Notify channel (módulo cli/notify-commands). Lives under a `notify`
+// command group so it doesn't collide with the existing `identity` group,
+// which is reserved for GitHub attestation binding. The factory imports
+// commander synchronously but the subcommand action handlers are loaded
+// lazily, so boot stays fast.
+program.addCommand(notifyCommand());
 
 program
   .command("delete")
