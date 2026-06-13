@@ -98,6 +98,60 @@ export interface BeheldConfig {
   email_recovery?: string;
   /** Anonymous platform ping consent. See lib/telemetry-config.ts. */
   telemetry?: TelemetryConfig;
+
+  // ── Notify channel (módulo cli/notify-commands) ───────────────────────────
+  // Local cache of the developer communication email channel. Source of
+  // truth lives in the portal (`Account.account_emails` + `NotifyPreferences`)
+  // — these fields exist so the CLI can render `notify status` and decide
+  // whether to enqueue a digest signal without a round-trip.
+  // Spec canônica: produto/analise/analise-email-comunicacao.md (rodada 5).
+
+  /** Email registered for product notifications (bundle events + weekly
+   *  digest). Distinct from `email_recovery` — the legacy recovery email
+   *  cache is kept untouched for backward compat. */
+  notification_email?: NotifyEmailRecord;
+
+  /** Per-purpose recovery email record. Mirrors `notification_email` shape
+   *  but for the security/recovery purpose. */
+  recovery_email?: NotifyEmailRecord;
+
+  /** Granular consents. Defaults: security/recovery on, bundle_events/weekly
+   *  off — matches the portal's NotifyPreferences defaults. */
+  notify_consents?: NotifyConsents;
+
+  /** Local view of the weekly digest schedule. `next_signal_at` is computed
+   *  client-side when `weekly` is freshly enabled so the daemon (module 5)
+   *  knows when to send the next digest signal. */
+  notify_weekly?: NotifyWeeklyState;
+
+  /** What to do for a weekly cycle with no score delta. Default: "notify"
+   *  (short email registering the silence). */
+  notify_silent_weeks_policy?: "notify" | "skip";
+
+  /** True after the second-stage consent offer (post-`--share`) has been
+   *  shown. Single-shot — recusa não retorna (módulo 3). */
+  notify_secondary_offer_shown?: boolean;
+}
+
+export interface NotifyEmailRecord {
+  value: string;
+  verified: boolean;
+  verified_at: string | null;
+}
+
+export interface NotifyConsents {
+  security: boolean;
+  recovery: boolean;
+  bundle_events: boolean;
+  weekly: boolean;
+}
+
+export interface NotifyWeeklyState {
+  enabled: boolean;
+  delta_threshold: number;
+  last_signal_payload: object | null;
+  last_signal_sent_at: string | null;
+  next_signal_at: string | null;
 }
 
 export interface L1ImportResponse {
