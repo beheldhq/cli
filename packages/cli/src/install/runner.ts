@@ -47,7 +47,7 @@ export interface RunInstallOpts {
   /**
    * Install counter disclosure. When present, printed between the opener and
    * the first `· pre-flight`. The caller decides whether to include it (checks
-   * BEHELD_NO_TELEMETRY, isFirstInstall, etc.); the runner just renders.
+   * BEHELD_NO_TELEMETRY, needsRegistration, etc.); the runner just renders.
    */
   counterPayload?: { id: string; os: string; version: string };
 }

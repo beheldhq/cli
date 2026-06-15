@@ -26,18 +26,40 @@ afterEach(() => {
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });
 
-// ── isFirstInstall ───────────────────────────────────────────────────────────
+// ── needsRegistration / isAlreadyRegistered ──────────────────────────────────
 
-describe("isFirstInstall", () => {
-  test("true when install-id missing", async () => {
-    const { isFirstInstall } = await import("../../src/install/counter");
-    expect(isFirstInstall()).toBe(true);
+describe("needsRegistration / isAlreadyRegistered", () => {
+  test("needs registration when neither file exists", async () => {
+    const { needsRegistration, isAlreadyRegistered } = await import(
+      "../../src/install/counter"
+    );
+    expect(needsRegistration()).toBe(true);
+    expect(isAlreadyRegistered()).toBe(false);
   });
 
-  test("false when install-id present", async () => {
+  test("needs registration when install-id exists but marker missing (retry case)", async () => {
     fs.writeFileSync(path.join(tmpDir, ".beheld", "install-id"), "some-uuid");
-    const { isFirstInstall } = await import("../../src/install/counter");
-    expect(isFirstInstall()).toBe(false);
+    const { needsRegistration, isAlreadyRegistered } = await import(
+      "../../src/install/counter"
+    );
+    expect(needsRegistration()).toBe(true);
+    expect(isAlreadyRegistered()).toBe(false);
+  });
+
+  test("does NOT need registration when both files exist", async () => {
+    fs.writeFileSync(path.join(tmpDir, ".beheld", "install-id"), "some-uuid");
+    fs.writeFileSync(path.join(tmpDir, ".beheld", "install-id.registered"), "");
+    const { needsRegistration, isAlreadyRegistered } = await import(
+      "../../src/install/counter"
+    );
+    expect(needsRegistration()).toBe(false);
+    expect(isAlreadyRegistered()).toBe(true);
+  });
+
+  test("orphan marker without install-id still needs registration", async () => {
+    fs.writeFileSync(path.join(tmpDir, ".beheld", "install-id.registered"), "");
+    const { needsRegistration } = await import("../../src/install/counter");
+    expect(needsRegistration()).toBe(true);
   });
 });
 
@@ -81,11 +103,20 @@ describe("getRegisterPayload", () => {
     expect(payload!.version).toBe("0.3.2");
   });
 
-  test("ids são únicos entre chamadas", async () => {
+  test("ids são únicos entre chamadas quando não há install-id em disco", async () => {
     const { getRegisterPayload } = await import("../../src/install/counter");
     const a = getRegisterPayload("0.3.2");
     const b = getRegisterPayload("0.3.2");
     if (a && b) expect(a.id).not.toBe(b.id);
+  });
+
+  test("reutiliza UUID existente quando install-id já foi escrito (retry)", async () => {
+    const existing = "550e8400-e29b-41d4-a716-446655440000";
+    fs.writeFileSync(path.join(tmpDir, ".beheld", "install-id"), existing);
+    const { getRegisterPayload } = await import("../../src/install/counter");
+    const payload = getRegisterPayload("0.3.2");
+    if (payload === null) return; // unsupported platform
+    expect(payload.id).toBe(existing);
   });
 });
 
@@ -98,8 +129,8 @@ describe("registerFirstInstall", () => {
     version: "0.3.2",
   };
 
-  test("writes install-id EVEN when POST fails", async () => {
-    const { registerFirstInstall, installIdPath } = await import(
+  test("writes install-id but NOT marker when POST fails (retry stays armed)", async () => {
+    const { registerFirstInstall, installIdPath, registeredMarkerPath } = await import(
       "../../src/install/counter"
     );
     const fakeFetch = async () => {
@@ -109,10 +140,11 @@ describe("registerFirstInstall", () => {
     expect(result.sent).toBe(false);
     expect(fs.existsSync(installIdPath())).toBe(true);
     expect(fs.readFileSync(installIdPath(), "utf8")).toBe(validPayload.id);
+    expect(fs.existsSync(registeredMarkerPath())).toBe(false);
   });
 
-  test("writes install-id when POST returns 5xx", async () => {
-    const { registerFirstInstall, installIdPath } = await import(
+  test("writes install-id but NOT marker when POST returns 5xx", async () => {
+    const { registerFirstInstall, installIdPath, registeredMarkerPath } = await import(
       "../../src/install/counter"
     );
     const fakeFetch = async () =>
@@ -121,10 +153,11 @@ describe("registerFirstInstall", () => {
     expect(result.sent).toBe(false);
     expect(result.reason).toContain("503");
     expect(fs.existsSync(installIdPath())).toBe(true);
+    expect(fs.existsSync(registeredMarkerPath())).toBe(false);
   });
 
-  test("POST 204 → sent:true, arquivo gravado", async () => {
-    const { registerFirstInstall, installIdPath } = await import(
+  test("POST 204 → sent:true, install-id E marker gravados", async () => {
+    const { registerFirstInstall, installIdPath, registeredMarkerPath } = await import(
       "../../src/install/counter"
     );
     const fakeFetch = async () =>
@@ -132,14 +165,44 @@ describe("registerFirstInstall", () => {
     const result = await registerFirstInstall(validPayload, { fetchImpl: fakeFetch as never });
     expect(result.sent).toBe(true);
     expect(fs.existsSync(installIdPath())).toBe(true);
+    expect(fs.existsSync(registeredMarkerPath())).toBe(true);
   });
 
-  test("POST 429 (rate limit) → tratado como sucesso silencioso", async () => {
-    const { registerFirstInstall } = await import("../../src/install/counter");
+  test("POST 429 (rate limit) → tratado como sucesso silencioso, marker gravado", async () => {
+    const { registerFirstInstall, registeredMarkerPath } = await import(
+      "../../src/install/counter"
+    );
     const fakeFetch = async () =>
       ({ ok: false, status: 429 } as Response);
     const result = await registerFirstInstall(validPayload, { fetchImpl: fakeFetch as never });
     expect(result.sent).toBe(true);
+    expect(fs.existsSync(registeredMarkerPath())).toBe(true);
+  });
+
+  test("retry após falha reusa MESMO UUID; sucesso grava o marker", async () => {
+    const { getRegisterPayload, registerFirstInstall, installIdPath, registeredMarkerPath } =
+      await import("../../src/install/counter");
+
+    // First attempt — server down.
+    const first = getRegisterPayload("0.3.2");
+    if (first === null) return; // unsupported platform
+    const downFetch = async () => {
+      throw new Error("network down");
+    };
+    const r1 = await registerFirstInstall(first, { fetchImpl: downFetch as never });
+    expect(r1.sent).toBe(false);
+    expect(fs.existsSync(installIdPath())).toBe(true);
+    expect(fs.existsSync(registeredMarkerPath())).toBe(false);
+    const persistedId = fs.readFileSync(installIdPath(), "utf8");
+
+    // Second attempt — payload picks up the SAME id from disk.
+    const second = getRegisterPayload("0.3.2");
+    expect(second!.id).toBe(persistedId);
+
+    const okFetch = async () => ({ ok: true, status: 204 } as Response);
+    const r2 = await registerFirstInstall(second!, { fetchImpl: okFetch as never });
+    expect(r2.sent).toBe(true);
+    expect(fs.existsSync(registeredMarkerPath())).toBe(true);
   });
 
   test("arquivo install-id tem mode 0o600", async () => {

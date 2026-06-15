@@ -224,20 +224,22 @@ async function screen4(
   const { buildInstallSteps } = await import("../install/steps");
   const { runInstall } = await import("../install/runner");
   const { detectRenderEnv } = await import("../install/render");
-  const { isFirstInstall, isOptedOut, getRegisterPayload, registerFirstInstall } =
+  const { needsRegistration, isOptedOut, getRegisterPayload, registerFirstInstall } =
     await import("../install/counter");
   const { VERSION } = await import("../index");
 
   const steps = buildInstallSteps(environments, actions);
   const env = detectRenderEnv({ lang });
 
-  // Cross-repo install counter. Only on the FIRST init run and only if
-  // the user hasn't opted out via BEHELD_NO_TELEMETRY. Payload is built
-  // BEFORE runInstall so the disclosure shows the real id that will be
-  // sent.
+  // Cross-repo install counter. Fires on first init AND on subsequent
+  // inits when a prior POST never reached the server (the .registered
+  // marker is missing). Skipped entirely when the user opted out via
+  // BEHELD_NO_TELEMETRY. Payload is built BEFORE runInstall so the
+  // disclosure shows the real id that will be sent — and on a retry, that
+  // id is the SAME UUID from the previous attempt.
   let counterPayload: { id: string; os: string; version: string } | undefined;
   let counterPromise: Promise<unknown> | undefined;
-  if (isFirstInstall() && !isOptedOut()) {
+  if (needsRegistration() && !isOptedOut()) {
     const payload = getRegisterPayload(VERSION);
     if (payload !== null) {
       counterPayload = payload;

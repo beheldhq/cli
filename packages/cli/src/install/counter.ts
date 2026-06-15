@@ -1,26 +1,31 @@
 /**
  * Cross-repo install counter.
  *
- * One single request per install lifetime:
+ * At most one SUCCESSFUL request per install lifetime:
  *   POST https://beheld.dev/api/install/register
  *   { id: <uuid-v4>, os: <"macos"|"linux">, version: <semver> }
  *
- * How it works:
- *   - On the first install run we generate a UUID and write it to
- *     ~/.beheld/install-id (mode 0o600).
- *   - The file IS the source of truth. Its presence = "already registered".
- *   - Updates and reinstalls don't touch the file or re-post.
- *   - rm -rf ~/.beheld/ deletes it and the next init counts as a new install;
- *     rare and acceptable.
+ * Two-file state machine in ~/.beheld/:
+ *   - install-id              → stable identity UUID (mode 0o600, written first)
+ *   - install-id.registered   → marker written only after server returns 204/429
+ *
+ * State transitions on `beheld init`:
+ *   - Neither exists       → fresh install: generate UUID, write install-id,
+ *                            POST, on success write the marker.
+ *   - install-id exists,   → previous POST never completed (offline / 5xx).
+ *     marker missing         Retry the POST with the SAME UUID. Server uses
+ *                            find_or_create_by!, so retries are idempotent.
+ *   - Both exist           → already registered. No-op.
  *
  * How to disable:
  *   BEHELD_NO_TELEMETRY=1 → nothing is sent, nothing is written, nothing
  *   appears in the init output. Invisible opt-out.
  *
- * POST failures never interrupt the install. The file is written EVEN if
- * the network fails — so the second run never tries again. No retry.
+ * POST failures never interrupt the install. The install-id file is written
+ * before the POST so the UUID is stable across retry attempts; the
+ * .registered marker is the success sentinel that stops future retries.
  */
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir, platform } from "node:os";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
@@ -67,6 +72,10 @@ export function installIdPath(): string {
   return join(beheldDir(), "install-id");
 }
 
+export function registeredMarkerPath(): string {
+  return join(beheldDir(), "install-id.registered");
+}
+
 // ── environment detection ────────────────────────────────────────────────────
 
 export function getOsTag(): "macos" | "linux" | null {
@@ -84,26 +93,47 @@ export function isOptedOut(): boolean {
   return v === "1" || v.toLowerCase() === "true" || v.toLowerCase() === "yes";
 }
 
-export function isFirstInstall(): boolean {
-  return !existsSync(installIdPath());
+export function isAlreadyRegistered(): boolean {
+  return existsSync(installIdPath()) && existsSync(registeredMarkerPath());
+}
+
+export function needsRegistration(): boolean {
+  return !isAlreadyRegistered();
 }
 
 // ── payload build + send ─────────────────────────────────────────────────────
 
+/**
+ * Builds the payload to POST. If `install-id` already exists on disk (a
+ * previous attempt that didn't reach the .registered marker), the existing
+ * UUID is reused — so the server's idempotency (find_or_create_by!) is
+ * what guarantees we never double-count.
+ */
 export function getRegisterPayload(version: string): RegisterPayload | null {
   const os = getOsTag();
   if (os === null) return null;
   return {
-    id: randomUUID(),
+    id: readExistingInstallId() ?? randomUUID(),
     os,
     version,
   };
 }
 
+function readExistingInstallId(): string | null {
+  try {
+    const raw = readFileSync(installIdPath(), "utf8").trim();
+    return raw.length > 0 ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Writes ~/.beheld/install-id BEFORE any network call. The file's presence
- * defines "already registered" — POST failure does not cause retry, and
- * POST success is not required to avoid duplication.
+ * Writes ~/.beheld/install-id BEFORE the network call (stable identity for
+ * any future retry), then POSTs to /api/install/register. On a successful
+ * response (204 or 429), drops a `.registered` marker so subsequent inits
+ * don't retry. If the POST fails, the marker is NOT written and the next
+ * `beheld init` will retry with the same UUID.
  */
 export async function registerFirstInstall(
   payload: RegisterPayload,
@@ -117,7 +147,8 @@ export async function registerFirstInstall(
     return { sent: false, reason: "beheld dir inaccessible" };
   }
 
-  // 2. Write the file FIRST. This is the critical invariant.
+  // 2. Write install-id first. Stable identity is what makes retries safe:
+  // the server is idempotent on this UUID, so re-POSTing never double-counts.
   try {
     writeFileSync(installIdPath(), payload.id, { mode: 0o600 });
   } catch (err) {
@@ -127,7 +158,8 @@ export async function registerFirstInstall(
     };
   }
 
-  // 3. Fire-and-forget POST. Failures do not block the install.
+  // 3. POST. Failures do not block the install — they just leave the
+  // .registered marker unwritten, so the next init retries.
   const fetchImpl = opts.fetchImpl ?? fetch;
   try {
     const controller = new AbortController();
@@ -140,15 +172,25 @@ export async function registerFirstInstall(
     });
     clearTimeout(timer);
     // 204 = success. 429 = rate limit, treated as silent success by design.
-    // Other 4xx/5xx: the file is already written, so no retry — just report.
     if (res.ok || res.status === 429) {
+      markRegistered();
       return { sent: true };
     }
+    // 4xx/5xx: leave .registered absent so next init retries.
     return { sent: false, reason: `HTTP ${res.status}` };
   } catch (err) {
     return {
       sent: false,
       reason: err instanceof Error ? err.message : "network failed",
     };
+  }
+}
+
+function markRegistered(): void {
+  try {
+    writeFileSync(registeredMarkerPath(), "", { mode: 0o600 });
+  } catch {
+    // Marker write failure is non-fatal: worst case is one extra retry on
+    // the next init, which the server idempotency absorbs.
   }
 }
