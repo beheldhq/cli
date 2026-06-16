@@ -8,58 +8,52 @@ permissions:
   contents: write
 
 jobs:
-  build:
-    name: build (${{ matrix.target }})
-    runs-on: ${{ matrix.runner }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - target: bun-darwin-arm64
-            runner: macos-latest
-            artifact: beheld-darwin-arm64
-          - target: bun-linux-x64
-            runner: ubuntu-latest
-            artifact: beheld-linux-x64
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-      - run: bun install --frozen-lockfile
-      - name: fetch engine binary
-        env:
-          BEHELD_ENGINE_TOKEN: ${{ secrets.BEHELD_ENGINE_TOKEN }}
-        run: sh scripts/fetch-engine.sh
-      - name: build
-        run: |
-          bun build packages/cli/src/index.ts \
-            --compile \
-            --target=${{ matrix.target }} \
-            --outfile dist/${{ matrix.artifact }}
-      - name: checksum
-        run: cd dist && shasum -a 256 ${{ matrix.artifact }} > ${{ matrix.artifact }}.sha256
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.artifact }}
-          path: |
-            dist/${{ matrix.artifact }}
-            dist/${{ matrix.artifact }}.sha256
-
-  publish:
-    needs: build
+  release:
+    name: build & publish CLI binaries
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
-        with:
-          path: dist
-          merge-multiple: true
-      - name: release
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        # bun-version is read from .bun-version
+
+      - run: bun install --frozen-lockfile
+
+      - name: build all targets
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BEHELD_ENGINE_TOKEN: ${{ secrets.BEHELD_ENGINE_TOKEN }}
+          # Pin engine to a known release. Bump when the engine ships a
+          # newer version; do not let this drift via "latest".
+          BEHELD_ENGINE_VERSION: v0.5.1
         run: |
-          gh release create "${GITHUB_REF_NAME}" \
-            --repo "${GITHUB_REPOSITORY}" \
-            --title "${GITHUB_REF_NAME}" \
-            --generate-notes \
-            dist/*
+          set -eu
+          mkdir -p dist
+          # TODO(darwin-x64): re-enable once beheldhq/engine ships
+          # beheld-engine-darwin-x64. The install.sh and fetch-engine
+          # currently fail early with an actionable message for that
+          # combo.
+          for entry in linux:x64 linux:arm64 darwin:arm64; do
+            target_os="${entry%:*}"
+            target_arch="${entry#*:}"
+            echo "==> building beheld-${target_os}-${target_arch}"
+            BEHELD_ENGINE_OS="$target_os" \
+            BEHELD_ENGINE_ARCH="$target_arch" \
+              sh scripts/fetch-engine.sh
+            bun build packages/cli/src/index.ts \
+              --compile \
+              --minify \
+              --target="bun-${target_os}-${target_arch}" \
+              --outfile "dist/beheld-${target_os}-${target_arch}"
+            ( cd dist && \
+              sha256sum "beheld-${target_os}-${target_arch}" \
+                > "beheld-${target_os}-${target_arch}.sha256" )
+          done
+          ls -la dist
+
+      - name: release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/beheld-*
+          fail_on_unmatched_files: true
+          generate_release_notes: true
