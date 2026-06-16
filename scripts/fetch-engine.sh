@@ -26,6 +26,20 @@ case "$os" in
   *) echo "fetch-engine: unsupported OS: $os" >&2; exit 1 ;;
 esac
 
+if [ "$os" = "darwin" ] && [ "$arch" = "x64" ]; then
+  cat >&2 <<'EOF'
+fetch-engine: macOS Intel (darwin-x64) is not yet available.
+
+The beheldhq/engine release currently ships:
+  - beheld-engine-linux-x64
+  - beheld-engine-linux-arm64
+  - beheld-engine-darwin-arm64 (Apple Silicon)
+
+Track Intel macOS support: https://github.com/beheldhq/cli/issues
+EOF
+  exit 1
+fi
+
 asset_base="beheld-engine-${os}-${arch}"
 asset_tarball="${asset_base}.tar.gz"
 asset_checksum="${asset_tarball}.sha256"
