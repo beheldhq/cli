@@ -13,12 +13,25 @@ if [ -z "${BEHELD_ENGINE_TOKEN:-}" ]; then
 fi
 
 version="${BEHELD_ENGINE_VERSION:-latest}"
-os="$(uname -s | tr '[:upper:]' '[:lower:]')"
-arch_raw="$(uname -m)"
-case "$arch_raw" in
-  arm64|aarch64) arch="arm64" ;;
-  x86_64|amd64)  arch="x64" ;;
-  *) echo "fetch-engine: unsupported arch: $arch_raw" >&2; exit 1 ;;
+
+# Target selection: BEHELD_ENGINE_OS / BEHELD_ENGINE_ARCH override the
+# host-derived defaults so a single Linux runner can fetch engines for
+# all release targets via a loop. When unset, fall back to `uname` for
+# local development.
+host_os="$(uname -s | tr '[:upper:]' '[:lower:]')"
+host_arch_raw="$(uname -m)"
+case "$host_arch_raw" in
+  arm64|aarch64) host_arch="arm64" ;;
+  x86_64|amd64)  host_arch="x64" ;;
+  *) host_arch="$host_arch_raw" ;;
+esac
+
+os="${BEHELD_ENGINE_OS:-$host_os}"
+arch="${BEHELD_ENGINE_ARCH:-$host_arch}"
+
+case "$arch" in
+  arm64|x64) ;;
+  *) echo "fetch-engine: unsupported arch: $arch" >&2; exit 1 ;;
 esac
 
 case "$os" in
@@ -132,4 +145,12 @@ fi
 mv "${tmpdir}/beheld-engine" "$dest"
 chmod +x "$dest"
 echo "fetch-engine: wrote $dest"
-"$dest" --version 2>&1 || echo "fetch-engine: WARN binary did not respond to --version"
+
+# Smoke-test only when the fetched engine matches the host architecture.
+# Cross-target builds (e.g. fetching darwin-arm64 on a linux-x64 runner)
+# must not exec the binary — it would crash or be rejected by the kernel.
+if [ "$os" = "$host_os" ] && [ "$arch" = "$host_arch" ]; then
+  "$dest" --version 2>&1 || echo "fetch-engine: WARN binary did not respond to --version"
+else
+  echo "fetch-engine: skipping smoke-test (cross-target ${os}-${arch} from host ${host_os}-${host_arch})"
+fi
