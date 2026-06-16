@@ -125,25 +125,7 @@ echo ""
 # pattern as nvm, rustup (without -y), uv, etc.
 
 echo ""
-if ! echo ":${PATH}:" | grep -q ":${INSTALL_DIR}:"; then
-  cat <<EOF
-──────────────────────────────────────────────────────────────
-⚠️  ${INSTALL_DIR} is not in PATH for the current shell.
-
-This is expected on a fresh install — most distros add it only at
-next login. Activate it now with one of these:
-
-    source ~/.profile                      # Ubuntu / Debian / Fedora
-    export PATH="\$HOME/.local/bin:\$PATH"   # any shell
-
-(New terminal sessions will pick it up automatically.)
-
-Then finish setup:
-
-    beheld init
-──────────────────────────────────────────────────────────────
-EOF
-else
+if echo ":${PATH}:" | grep -q ":${INSTALL_DIR}:"; then
   cat <<'EOF'
 ──────────────────────────────────────────────────────────────
 Almost there. Finish setup from your own shell:
@@ -151,6 +133,67 @@ Almost there. Finish setup from your own shell:
     beheld init
 
 The wizard is interactive and won't work piped through curl.
+──────────────────────────────────────────────────────────────
+EOF
+else
+  # ${INSTALL_DIR} is not in PATH for the calling shell. Two things to do:
+  #
+  # 1. For NEXT sessions: append `export PATH=...` to common shell rc files
+  #    so a new terminal "just works". Idempotent — guarded by a marker
+  #    block. Same pattern as rustup, uv, nvm.
+  #
+  # 2. For THIS session: print the one-liner the user can run right now,
+  #    because `curl | sh` runs in a child sh and can't mutate the parent
+  #    shell's environment.
+  marker_open='# >>> beheld installer >>> (managed; remove this block to opt out)'
+  marker_close='# <<< beheld installer <<<'
+  updated=""
+
+  for rc in "$HOME/.bashrc" "$HOME/.zshrc"; do
+    if [ -f "$rc" ] && ! grep -qF "$marker_open" "$rc"; then
+      {
+        printf '\n%s\n' "$marker_open"
+        printf 'export PATH="$HOME/.local/bin:$PATH"\n'
+        printf '%s\n' "$marker_close"
+      } >> "$rc"
+      updated="${updated}    - $rc
+"
+    fi
+  done
+
+  # Fallback: nothing existed (no bashrc, no zshrc). Use ~/.profile so
+  # at least the next login shell picks it up.
+  if [ -z "$updated" ] && ! grep -qF "$marker_open" "$HOME/.profile" 2>/dev/null; then
+    {
+      printf '\n%s\n' "$marker_open"
+      printf 'export PATH="$HOME/.local/bin:$PATH"\n'
+      printf '%s\n' "$marker_close"
+    } >> "$HOME/.profile"
+    updated="    - $HOME/.profile
+"
+  fi
+
+  if [ -n "$updated" ]; then
+    activate_files="$updated"
+  else
+    activate_files="    (PATH export was already present; nothing to add.)
+"
+  fi
+
+  cat <<EOF
+──────────────────────────────────────────────────────────────
+⚠️  ${INSTALL_DIR} is not in PATH for the current shell.
+
+Updated for future sessions:
+${activate_files}
+For the current shell, run one of:
+
+    exec \$SHELL -l                          # restart shell (cleanest)
+    export PATH="\$HOME/.local/bin:\$PATH"   # patch just this session
+
+Then finish setup:
+
+    beheld init
 ──────────────────────────────────────────────────────────────
 EOF
 fi
