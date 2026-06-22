@@ -47,8 +47,9 @@ async function askTelemetryConsent(): Promise<TelemetryConfig> {
     return { consent: "denied", consented_at: now };
   }
 
+  const { mark } = await import("../brand");
   console.log("");
-  console.log("─ ( · · · ⊙ · · · ) ─");
+  console.log(`  ${mark()}`);
   console.log("B3H31D phones home once a day with: version, OS, architecture.");
   console.log("Nothing about your work leaves your machine.");
 
