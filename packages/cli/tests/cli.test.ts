@@ -1,4 +1,4 @@
-import { test, expect, describe, mock, beforeEach, afterEach } from "bun:test";
+import { test, expect, describe, mock, beforeAll, afterAll, beforeEach, afterEach } from "bun:test";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { mkdirSync, writeFileSync, rmSync, readFileSync, existsSync, mkdtempSync, statSync, chmodSync } from "node:fs";
@@ -1063,11 +1063,36 @@ describe("autostart — templates de LaunchAgent e systemd", () => {
 
 describe("view --json and --scores-only do not pollute stdout with warnings", () => {
   const repoRoot = join(import.meta.dir, "../../..");
+  // Pin the engine offline + seed a cache DB so `view` reads deterministic
+  // scores from cache. Without this the test depends on a live engine on
+  // 127.0.0.1:7338 — fine on a dev box, but on a clean CI runner the engine is
+  // absent and stdout comes back empty (JSON.parse → "Unexpected EOF").
+  const deadEngineUrl = "http://127.0.0.1:19999";
+  let dbPath: string;
+  const spawnEnv = (): Record<string, string> => ({
+    ...process.env as Record<string, string>,
+    BEHELD_ENGINE_URL: deadEngineUrl,
+    BEHELD_CACHE_DB: dbPath,
+  });
+
+  beforeAll(async () => {
+    const { Database } = await import("bun:sqlite");
+    dbPath = join(tmpdir(), `beheld-jsonout-${randomUUID()}.db`);
+    const db = new Database(dbPath);
+    db.exec(
+      `CREATE TABLE scores (date TEXT, prompt_quality INTEGER, test_maturity INTEGER,
+       tech_breadth INTEGER, growth_rate INTEGER, overall INTEGER, sessions_analyzed INTEGER)`,
+    );
+    db.exec(`INSERT INTO scores VALUES ('2024-01-01', 70, 60, 80, 50, 68, 5)`);
+    db.close();
+  });
+
+  afterAll(() => { if (dbPath) rmSync(dbPath, { force: true }); });
 
   test("view --json returns pure JSON on stdout (no warnings)", async () => {
     const proc = Bun.spawn(
       ["bun", "run", "packages/cli/src/index.ts", "view", "--json"],
-      { cwd: repoRoot, stdout: "pipe", stderr: "pipe" },
+      { cwd: repoRoot, env: spawnEnv(), stdout: "pipe", stderr: "pipe" },
     );
     const [stdout] = await Promise.all([
       new Response(proc.stdout).text(),
@@ -1082,7 +1107,7 @@ describe("view --json and --scores-only do not pollute stdout with warnings", ()
   test("view --json puts warnings on stderr, not stdout", async () => {
     const proc = Bun.spawn(
       ["bun", "run", "packages/cli/src/index.ts", "view", "--json"],
-      { cwd: repoRoot, stdout: "pipe", stderr: "pipe" },
+      { cwd: repoRoot, env: spawnEnv(), stdout: "pipe", stderr: "pipe" },
     );
     const [stdout, stderr] = await Promise.all([
       new Response(proc.stdout).text(),
@@ -1100,7 +1125,7 @@ describe("view --json and --scores-only do not pollute stdout with warnings", ()
   test("view --scores-only does not pollute stdout with warnings", async () => {
     const proc = Bun.spawn(
       ["bun", "run", "packages/cli/src/index.ts", "view", "--scores-only"],
-      { cwd: repoRoot, stdout: "pipe", stderr: "pipe" },
+      { cwd: repoRoot, env: spawnEnv(), stdout: "pipe", stderr: "pipe" },
     );
     const [stdout] = await Promise.all([
       new Response(proc.stdout).text(),

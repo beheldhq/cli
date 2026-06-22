@@ -41,7 +41,16 @@ afterEach(() => {
 
 describe("Accept-Language injection", () => {
   test("default request includes Accept-Language from env", async () => {
-    const prev = process.env.LANG;
+    // detectLocale reads LC_ALL || LANG || LANGUAGE. CI runners usually set
+    // LC_ALL (e.g. C.UTF-8), which would win over LANG — clear the
+    // higher-precedence vars so LANG drives the result deterministically.
+    const prev = {
+      LANG: process.env.LANG,
+      LC_ALL: process.env.LC_ALL,
+      LANGUAGE: process.env.LANGUAGE,
+    };
+    delete process.env.LC_ALL;
+    delete process.env.LANGUAGE;
     process.env.LANG = "pt_BR.UTF-8";
     try {
       let seenHeader: string | null = null;
@@ -57,8 +66,10 @@ describe("Accept-Language injection", () => {
 
       expect(seenHeader).toBe("pt-BR,en;q=0.9,es;q=0.8");
     } finally {
-      if (prev === undefined) delete process.env.LANG;
-      else process.env.LANG = prev;
+      for (const [k, v] of Object.entries(prev)) {
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
+      }
     }
   });
 
