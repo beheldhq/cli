@@ -12,6 +12,9 @@ cd "$repo_root"
 mkdir -p dist
 
 engine_asset="packages/cli/assets/beheld-engine"
+# The assets/ dir isn't checked in, so on a clean checkout (CI) it must be
+# created before either branch writes the engine binary into it.
+mkdir -p "$(dirname "$engine_asset")"
 
 if [ -n "${BEHELD_ENGINE_TOKEN:-}" ]; then
   # Pin the embedded engine to its own latest release (override by exporting
