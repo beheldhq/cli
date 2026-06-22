@@ -83,7 +83,7 @@ export async function verifyCommand(
       )
       .join(", ");
     console.log(`  ${DIM}sources      ${RESET}${formatted}`);
-  } else if (manifest.schema === "v6") {
+  } else if (manifest.schema === "v6_legacy") {
     console.log(`  ${DIM}sources      (no enrichment — L1-only bundle)${RESET}`);
   } else {
     console.log(`  ${DIM}sources      (not tracked in ${manifest.schemaLabel})${RESET}`);
@@ -136,7 +136,7 @@ export async function verifyCommand(
     } else if (!attCheck.payload_valid) {
       console.log(`    ${mark(false)} identity  ${attCheck.reason ?? "invalid payload"}`);
     } else {
-      const allGood = attCheck.signature_valid && attCheck.dev_pubkey_matches && attCheck.key_status === "active";
+      const allGood = !!(attCheck.signature_valid && attCheck.dev_pubkey_matches && attCheck.key_status === "active");
       const gh = attCheck.github;
       const ghLabel = gh ? `${gh.login} (id=${gh.user_id})` : "?";
       console.log(`    ${mark(allGood)} identity  github: ${ghLabel}`);

@@ -216,7 +216,9 @@ function startCallbackServer(opts: { cliState: string; timeoutMs: number }): Cal
   }
 
   return {
-    port: server.port,
+    // Bun.serve({ port: 0 }) has bound an ephemeral port by the time it
+    // returns, so server.port is a real number here despite its optional type.
+    port: server.port!,
     claimCodePromise,
     stop: () => {
       clearTimeout(timeoutHandle);

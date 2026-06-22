@@ -164,7 +164,12 @@ async function verifySignature(
   const canonical = new TextEncoder().encode(canonicalJson(att.payload));
   let ok: boolean;
   try {
-    ok = await crypto.subtle.verify({ name: "Ed25519" }, pubKey, sigBytes, canonical);
+    ok = await crypto.subtle.verify(
+      { name: "Ed25519" },
+      pubKey,
+      sigBytes as BufferSource,
+      canonical as BufferSource,
+    );
   } catch (e) {
     return { ok: false, reason: `verify threw: ${(e as Error).message}` };
   }

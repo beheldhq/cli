@@ -100,7 +100,13 @@ function ensureBaseConfig(): BeheldConfig {
     readBeheldConfig() ?? {
       version: "0.1.0",
       initialized_at: new Date().toISOString(),
-      dimensions: { code: true, prompts: true, workflow: true } as BeheldConfig["dimensions"],
+      dimensions: {
+        prompt_quality: true,
+        test_maturity: true,
+        tech_breadth: true,
+        work_hours: true,
+        project_type: true,
+      },
       environments: { claudeCode: false, continueDev: false },
     }
   );
