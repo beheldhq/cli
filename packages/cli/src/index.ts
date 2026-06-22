@@ -3,6 +3,7 @@ import { Command } from "commander";
 import { maybeShowBundleNudge } from "./lib/nudge";
 import { notifyCommand } from "./commands/notify";
 import { VERSION } from "./version";
+import { banner } from "./brand";
 
 // Imported lazily inside the preAction hook to keep boot fast and to
 // avoid pulling crypto on `beheld -v`.
@@ -15,7 +16,10 @@ const program = new Command();
 program
   .name("beheld")
   .description("Privacy-first developer profiling for Claude Code and Continue.dev")
-  .version(VERSION, "-v, --version");
+  // `-v` shows the brand banner above the version string. The raw version is
+  // still on its own line (`v0.5.0`) so scripts can grep it. banner() detects
+  // TTY/NO_COLOR, so piped output degrades to the plain inline lockup.
+  .version(`${banner()}\n\n  v${VERSION}`, "-v, --version");
 
 // P22.1: terminal nudge — shown once per shell session when the local
 // bundle is 5+ days old. Runs before each command via preAction; `nudge.ts`

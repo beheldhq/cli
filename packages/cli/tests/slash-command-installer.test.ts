@@ -71,7 +71,7 @@ describe("installClaudeSlashCommand — versioning", () => {
     const content = readFileSync(file, "utf-8");
     expect(content.startsWith("---\n")).toBe(true);
     expect(content).toContain(`version: "${SLASH_COMMAND_VERSION}"`);
-    expect(SLASH_COMMAND_VERSION).toBe("7");
+    expect(SLASH_COMMAND_VERSION).toBe("8");
   });
 
   test("test_slash_command_version_1_overwritten_on_init", async () => {
@@ -93,7 +93,7 @@ describe("installClaudeSlashCommand — versioning", () => {
 
     const content = readFileSync(file, "utf-8");
     expect(content).toContain(`version: "${SLASH_COMMAND_VERSION}"`);
-    expect(content).toMatch(/^---\nversion: "7"\n---\n/);
+    expect(content).toMatch(/^---\nversion: "8"\n---\n/);
     // Old greeting and old "Retorne a saudação" trailer must be gone.
     expect(content).not.toContain("sou a testemunha da evolução");
     expect(content).not.toContain("Retorne a saudação");
@@ -107,7 +107,7 @@ describe("installClaudeSlashCommand — versioning", () => {
 
     const content = readFileSync(file, "utf-8");
     expect(content).toContain(`version: "${SLASH_COMMAND_VERSION}"`);
-    expect(content).toMatch(/^---\nversion: "7"\n---\n/);
+    expect(content).toMatch(/^---\nversion: "8"\n---\n/);
     // v3 had no stack routing — v4 must introduce it.
     expect(content).toContain("Rule 4 — Stack");
   });
@@ -147,37 +147,38 @@ describe("installClaudeSlashCommand — versioning", () => {
     await installClaudeSlashCommand(file);
 
     const content = readFileSync(file, "utf-8");
-    // v5: removed the blockquote (>) to avoid italic render in the CLI.
-    expect(content).toContain("-(·⊙·)-");
+    // v8: the decoration is the [#] brand mark (was -(·⊙·)- through v7).
+    expect(content).toContain("[#]");
     // v7: template uses "[3rd-person verb]" because bold B3H31D is the subject.
     expect(content).toContain("**B3H31D** [3rd-person verb]");
     // Decoration + blank line + B3H31D paragraph, without blockquote prefix.
-    expect(content).toMatch(/-\(·⊙·\)-\n\s*\n\s*\*\*B3H31D\*\*/);
+    expect(content).toMatch(/\[#\]\n\s*\n\s*\*\*B3H31D\*\*/);
     // v6: absolute rule against italic — literal quote of the prohibitions.
     expect(content).toContain("ZERO ITALICS");
   });
 
-  test("test_slash_command_content_contains_signal_symbol", async () => {
+  test("test_slash_command_content_contains_signal_mark", async () => {
     const file = tmpFile("beheld.md");
     await installClaudeSlashCommand(file);
 
     const content = readFileSync(file, "utf-8");
-    expect(content).toContain("-(·⊙·)-");
-    // v7: the decoration appears 2 times — once in the template and once in
+    expect(content).toContain("[#]");
+    // v8: the mark appears 2 times — once in the template and once in
     // the CORRECT EXAMPLE. This is the fixed expected count; more or less indicates drift.
-    const occurrences = content.split("-(·⊙·)-").length - 1;
+    const occurrences = content.split("[#]").length - 1;
     expect(occurrences).toBe(2);
-    // Make sure the old decoration did not leak.
+    // Make sure neither old decoration leaked.
     expect(content).not.toContain("─ ( · · · ⊙ · · · ) ─");
+    expect(content).not.toContain("-(·⊙·)-");
   });
 
-  test("test_slash_command_content_contains_version_7_frontmatter", async () => {
+  test("test_slash_command_content_contains_version_8_frontmatter", async () => {
     const file = tmpFile("beheld.md");
     await installClaudeSlashCommand(file);
 
     const content = readFileSync(file, "utf-8");
     expect(content.startsWith("---\n")).toBe(true);
-    expect(content).toContain('version: "7"');
+    expect(content).toContain('version: "8"');
   });
 
   test("test_slash_command_content_contains_greeting_instruction", async () => {
@@ -249,10 +250,10 @@ describe("installClaudeSlashCommand — versioning", () => {
     expect(onDisk).toBe(SLASH_COMMAND_CONTENT);
 
     expect(SLASH_COMMAND_CONTENT).toContain(`version: "${SLASH_COMMAND_VERSION}"`);
-    expect(SLASH_COMMAND_CONTENT).toMatch(/^---\nversion: "7"\n---\n/);
+    expect(SLASH_COMMAND_CONTENT).toMatch(/^---\nversion: "8"\n---\n/);
     expect(SLASH_COMMAND_CONTENT).toContain("B3H31D");
-    // v5: visual invariants
-    expect(SLASH_COMMAND_CONTENT).toContain("-(·⊙·)-");
+    // v8: visual invariant — the [#] brand mark is the decoration
+    expect(SLASH_COMMAND_CONTENT).toContain("[#]");
     expect(SLASH_COMMAND_CONTENT).not.toContain("> ─");
     // v6: absolute rule against italic — explicit prohibitions for each
     // form of markup that could render as italic.

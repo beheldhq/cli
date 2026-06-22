@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16" shape-rendering="crispEdges" role="img" aria-label="beheld">
+  <title>beheld</title>
+  <!-- Favicon-optimized glyph for tiny sizes (≤32px). Drawn as pixel-aligned
+       filled rects on a 16-unit grid with chunky brackets, so the bracket form
+       survives where the detailed mark's thin strokes would vanish. Ink for
+       light backgrounds (#0a0b0b); cursor in signal green. Static. -->
+  <g fill="#0a0b0b">
+    <!-- left bracket: stem + two serifs -->
+    <rect x="2" y="3" width="2" height="10"/>
+    <rect x="2" y="3" width="4" height="2"/>
+    <rect x="2" y="11" width="4" height="2"/>
+    <!-- right bracket -->
+    <rect x="12" y="3" width="2" height="10"/>
+    <rect x="10" y="3" width="4" height="2"/>
+    <rect x="10" y="11" width="4" height="2"/>
+  </g>
+  <rect x="7" y="5" width="2" height="6" fill="#58d36c"/>
+</svg>

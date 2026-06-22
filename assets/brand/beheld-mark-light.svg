@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" fill="none" role="img" aria-label="beheld">
+  <title>beheld</title>
+  <!-- For light backgrounds: brackets in tinta inversa (#0a0b0b), cursor a
+       solid, static "#" in signal green — no animation. -->
+  <g stroke="#0a0b0b" stroke-width="7" stroke-linecap="square" stroke-linejoin="miter">
+    <path d="M46 28 H30 V92 H46"/>
+    <path d="M74 28 H90 V92 H74"/>
+  </g>
+  <g stroke="#58d36c" stroke-width="6" fill="none">
+    <path d="M53 43V77"/>
+    <path d="M67 43V77"/>
+    <path d="M47 54H73"/>
+    <path d="M47 66H73"/>
+  </g>
+</svg>

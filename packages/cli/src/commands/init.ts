@@ -72,6 +72,11 @@ export async function initCommand(
   const { isLang } = await import("../i18n/install");
   const lang = opts.lang && isLang(opts.lang) ? opts.lang : "en";
 
+  // Brand splash: the static lockup. The cursor is solid green — no animation.
+  // lockup() detects TTY/NO_COLOR, so piped output degrades to plain text.
+  const { lockup } = await import("../brand");
+  console.log(`\n  ${lockup()}\n`);
+
   ensureSecurePermissions();
   // Generate Ed25519 signing keys on first run (silent if already present).
   // Required for `beheld snapshot` (Phase 5 — signed .beheld).

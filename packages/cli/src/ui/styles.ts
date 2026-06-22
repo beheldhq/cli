@@ -2,6 +2,8 @@
 // should compose with these helpers instead of hard-coding ANSI escapes —
 // keeps the look consistent across commands and one place to swap themes.
 
+import { lockup, detectBrandEnv, dimSeq, resetSeq } from "../brand";
+
 export const RESET = "\x1b[0m";
 export const BOLD = "\x1b[1m";
 export const DIM = "\x1b[2m";
@@ -37,11 +39,14 @@ export const green = (text: string): string => `${GREEN}${text}${RESET}`;
  * shifts the tone per command (e.g. "observando seu dia" for status,
  * "checando saúde" for doctor).
  *
- * Format: `  ▎ beheld  <tagline>` — bar in cyan, name in cyan bold,
- * tagline in dim.
+ * Format: `  [▌] beheld  <tagline>` — the bracket mark with a green cursor
+ * (the brand glyph; see ../brand), tagline in dim. Color is gated on TTY /
+ * NO_COLOR, so piped output stays plain.
  */
-export const brand = (tagline: string): string =>
-  `\n  ${CYAN}▎${RESET} ${CYAN}${BOLD}beheld${RESET}  ${DIM}${tagline}${RESET}\n`;
+export const brand = (tagline: string): string => {
+  const env = detectBrandEnv();
+  return `\n  ${lockup(env)}  ${dimSeq(env)}${tagline}${resetSeq(env)}\n`;
+};
 
 
 /** Section header — bold + blank line above. */
