@@ -1,6 +1,6 @@
 {
   "name": "@beheld/mcp-server",
-  "version": "0.5.4",
+  "version": "0.5.5",
   "description": "Beheld MCP server — exposes the Beheld profile context to Claude Code, Continue.dev, Cursor, Copilot CLI, Windsurf, Codex, and other MCP hosts",
   "license": "Apache-2.0",
   "module": "src/server.ts",

@@ -13,4 +13,4 @@
  * explicit mirror in `app/controllers/versions_controller.rb` that needs
  * to be bumped in lockstep on deploy.
  */
-export const VERSION = "0.5.4";
+export const VERSION = "0.5.5";

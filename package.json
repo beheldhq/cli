@@ -1,6 +1,6 @@
 {
   "name": "@beheldhq/cli-workspace",
-  "version": "0.5.4",
+  "version": "0.5.5",
   "private": true,
   "description": "Beheld CLI monorepo — privacy-first developer profiler",
   "license": "Apache-2.0",
