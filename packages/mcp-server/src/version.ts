@@ -11,4 +11,4 @@
  * `packages/cli/src/version.ts` because `beheld doctor` reports the CLI
  * version and the version served on `/health` side by side.
  */
-export const VERSION = "0.5.5";
+export const VERSION = "0.5.6";
