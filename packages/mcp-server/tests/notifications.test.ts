@@ -142,10 +142,21 @@ describe("notifications config", () => {
   });
 
   test("checkUpdateAvailable marks update_check after checking", async () => {
-    // API will fail (network), but markNotified still called in finally
-    const svc = await makeService();
-    await svc.checkUpdateAvailable();
-    expect(await svc.shouldNotifyToday("update_check")).toBe(false);
+    // Force the /version fetch to fail fast against a dead port. The point of
+    // this test is that markNotified still runs in the finally block — NOT to
+    // exercise the real API. Without this, CI runners (which DO have internet)
+    // reach the live API, see a version mismatch, and hit the notify spawn
+    // (notify-send absent on Linux → throws).
+    const prevApi = process.env.BEHELD_API_URL;
+    process.env.BEHELD_API_URL = "http://127.0.0.1:19999";
+    try {
+      const svc = await makeService();
+      await svc.checkUpdateAvailable();
+      expect(await svc.shouldNotifyToday("update_check")).toBe(false);
+    } finally {
+      if (prevApi === undefined) delete process.env.BEHELD_API_URL;
+      else process.env.BEHELD_API_URL = prevApi;
+    }
   });
 
   test("checkUpdateAvailable skips when already checked today", async () => {
