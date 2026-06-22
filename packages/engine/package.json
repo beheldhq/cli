@@ -1,6 +1,6 @@
 {
   "name": "@beheld/engine",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "description": "Beheld engine — open boundary. Contracts and stub for local development; the proprietary engine lives in beheldhq/engine.",
   "license": "Apache-2.0",
   "private": true,
