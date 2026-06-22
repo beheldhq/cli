@@ -9,43 +9,16 @@
 
 import { getPortalUrl, getRekorUrl } from "../config/env";
 import { computeTier, type TrustTier } from "../lib/tier";
-
-interface BundlePayload {
-  scores?: { prompt_quality?: number; test_maturity?: number; tech_breadth?: number; growth_rate?: number; overall?: number };
-  l1?: { total_repos?: number; total_commits?: number; ecosystems?: Record<string, number>; platforms?: Record<string, number> };
-  l2?: { total_sessions?: number; workflow_distribution?: Record<string, number> };
-  created_at?: string;
-}
-
-interface BundleAttestationGithub {
-  login: string;
-  user_id: number;
-  verified_at: string;
-}
-
-interface BundleAttestationView {
-  payload?: { github?: BundleAttestationGithub };
-  signature?: string;
-}
-
-interface BundleRekorView {
-  logIndex?: number;
-  uuid?: string;
-  integratedTime?: string;
-}
-
-interface Bundle {
-  version: string;
-  payload: BundlePayload;
-  hash: string;
-  signature: string;
-  public_key: string;
-  // F5.6 + F5.8 — wrapper-level evidence. The trust-tier badge + details
-  // panel read these directly. Adding them does NOT change the bundle hash
-  // (the hash covers `payload` only).
-  attestation?: BundleAttestationView | null;
-  rekor?: BundleRekorView | null;
-}
+// Single source of truth for the wire format. The renderer reads canonical
+// bundles directly; legacy v5 fields (payload.l1/l2) are still tolerated at
+// runtime via local `as { ... }` casts at the read sites, so old bundles
+// rendered from memory keep working without a duplicate Bundle type here.
+import type {
+  Bundle,
+  BundleAttestation,
+  BundleScores,
+  RekorEntry,
+} from "../bundle/types";
 
 interface IdentityResult {
   identity_long: string;
@@ -185,7 +158,7 @@ const SCORE_LABELS: Record<string, string> = {
 
 const SCORE_DIMENSIONS = ["prompt_quality", "test_maturity", "tech_breadth", "growth_rate"] as const;
 
-function renderScoresSection(scores: BundlePayload["scores"] | undefined): string {
+function renderScoresSection(scores: BundleScores | undefined): string {
   // R1.2c — overall may legitimately be null in a v7 bundle (every
   // dimension absent at scoring time). Only render the section when
   // we have ANY numeric score to display. If the bundle has scores
@@ -475,13 +448,13 @@ const TIER_BADGE: Record<TrustTier, TierBadgeSpec> = {
 };
 
 function renderTierBadge(bundle: Bundle): string {
-  const tier = computeTier(bundle as Parameters<typeof computeTier>[0]);
+  const tier = computeTier(bundle);
   const spec = TIER_BADGE[tier];
   const attrs = `class="tier-badge tier-${spec.variant}" title="${escapeHtml(spec.hint)}" data-tier="${tier}"`;
   // For fully_verifiable bundles, link the badge to the public Sigstore
   // Rekor entry — recruiters can click the badge to inspect the inclusion
   // proof. Other tiers stay non-clickable spans.
-  const rekor = (bundle as { rekor?: BundleRekorView | null }).rekor;
+  const rekor = bundle.rekor;
   const rekorUrl =
     tier === "fully_verifiable" && rekor && typeof rekor.logIndex === "number"
       ? `https://search.sigstore.dev/?logIndex=${rekor.logIndex}`
@@ -500,7 +473,7 @@ function formatIsoToHuman(iso: string | undefined): string {
   return `${y}-${m}-${d}`;
 }
 
-function renderGithubIdentitySection(att: BundleAttestationView | null | undefined): string {
+function renderGithubIdentitySection(att: BundleAttestation | null | undefined): string {
   const gh = att?.payload?.github;
   const hasSig = typeof att?.signature === "string" && att.signature.length > 0;
   if (!gh || !hasSig) {
@@ -521,7 +494,7 @@ function renderGithubIdentitySection(att: BundleAttestationView | null | undefin
         </div>`;
 }
 
-function renderRekorSection(rekor: BundleRekorView | null | undefined): string {
+function renderRekorSection(rekor: RekorEntry | null | undefined): string {
   const hasRekor =
     !!rekor && typeof rekor.logIndex === "number" && typeof rekor.uuid === "string" && rekor.uuid.length > 0;
   if (!hasRekor) {
