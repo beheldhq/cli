@@ -1,6 +1,6 @@
 {
   "name": "@beheld/cli",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "description": "Beheld command-line interface — privacy-first developer profiler",
   "license": "Apache-2.0",
   "main": "src/index.ts",
