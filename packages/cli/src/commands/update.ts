@@ -6,7 +6,11 @@ import * as daemonManager from "../daemon-manager";
 import { GREEN, RED, DIM, BOLD, RESET, brand } from "../ui/styles";
 import { VERSION } from "../version";
 
-const RELEASES_BASE = "https://github.com/eduardovrocha/beheld/releases/download";
+// Canonical release repo. Must match install.sh's REPO and where release.yml
+// publishes (beheldhq/cli). The old eduardovrocha/beheld path was stale from
+// before the org move and broke `beheld update` once the API advertised a
+// version only published to beheldhq/cli.
+const RELEASES_BASE = "https://github.com/beheldhq/cli/releases/download";
 
 function platform(): string {
   if (process.platform === "darwin") {
