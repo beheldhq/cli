@@ -1,6 +1,13 @@
 import { t, type Lang } from "../i18n/install";
 import { RESET, DIM } from "../ui/styles";
+import { mark, type BrandEnv } from "../brand";
 import type { InstallReport, RenderEnv, StepState } from "./types";
+
+/** Bridge the install flow's boolean color flag to a BrandEnv so the [#] mark
+ *  paints its cursor green only when colour is on (and degrades to plain). */
+function brandEnv(color: boolean): BrandEnv {
+  return { tty: color, color, truecolor: color, width: 80 };
+}
 
 // ── B3 colors ───────────────────────────────────────────────────────────────
 
@@ -94,7 +101,7 @@ export function renderStepCompletion(state: StepState, env: RenderEnv): string[]
 // ── opener / closer ──────────────────────────────────────────────────────────
 
 export function renderOpener(env: RenderEnv): string {
-  const glyph = `  ${colorize("⦿", BRONZE, env.color)}  `;
+  const glyph = `  ${mark(brandEnv(env.color))}  `;
   return `${glyph}${t("install.opener", env.lang)}`;
 }
 
@@ -110,7 +117,7 @@ export function renderCounterDisclosure(
   payload: { id: string; os: string; version: string },
   env: RenderEnv,
 ): string[] {
-  const glyph = `  ${colorize("⦿", BRONZE, env.color)}  `;
+  const glyph = `  ${mark(brandEnv(env.color))}  `;
   const payloadJson = `{ id: ${payload.id}, os: ${payload.os}, version: ${payload.version} }`;
   return [
     `${glyph}${t("counter.heading", env.lang)}`,
@@ -120,7 +127,7 @@ export function renderCounterDisclosure(
 }
 
 export function renderCloser(report: InstallReport, env: RenderEnv): string {
-  const glyph = `  ${colorize("⦿", BRONZE, env.color)}  `;
+  const glyph = `  ${mark(brandEnv(env.color))}  `;
   if (report.succeeded) {
     return [
       `${glyph}${t("install.closer.ok.l1", env.lang)}`,

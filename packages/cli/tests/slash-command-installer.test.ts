@@ -71,7 +71,7 @@ describe("installClaudeSlashCommand — versioning", () => {
     const content = readFileSync(file, "utf-8");
     expect(content.startsWith("---\n")).toBe(true);
     expect(content).toContain(`version: "${SLASH_COMMAND_VERSION}"`);
-    expect(SLASH_COMMAND_VERSION).toBe("8");
+    expect(SLASH_COMMAND_VERSION).toBe("9");
   });
 
   test("test_slash_command_version_1_overwritten_on_init", async () => {
@@ -93,7 +93,7 @@ describe("installClaudeSlashCommand — versioning", () => {
 
     const content = readFileSync(file, "utf-8");
     expect(content).toContain(`version: "${SLASH_COMMAND_VERSION}"`);
-    expect(content).toMatch(/^---\nversion: "8"\n---\n/);
+    expect(content).toMatch(/^---\nversion: "9"\n---\n/);
     // Old greeting and old "Retorne a saudação" trailer must be gone.
     expect(content).not.toContain("sou a testemunha da evolução");
     expect(content).not.toContain("Retorne a saudação");
@@ -107,7 +107,7 @@ describe("installClaudeSlashCommand — versioning", () => {
 
     const content = readFileSync(file, "utf-8");
     expect(content).toContain(`version: "${SLASH_COMMAND_VERSION}"`);
-    expect(content).toMatch(/^---\nversion: "8"\n---\n/);
+    expect(content).toMatch(/^---\nversion: "9"\n---\n/);
     // v3 had no stack routing — v4 must introduce it.
     expect(content).toContain("Rule 4 — Stack");
   });
@@ -151,8 +151,8 @@ describe("installClaudeSlashCommand — versioning", () => {
     expect(content).toContain("[#]");
     // v7: template uses "[3rd-person verb]" because bold B3H31D is the subject.
     expect(content).toContain("**B3H31D** [3rd-person verb]");
-    // Decoration + blank line + B3H31D paragraph, without blockquote prefix.
-    expect(content).toMatch(/\[#\]\n\s*\n\s*\*\*B3H31D\*\*/);
+    // v9: mark inline with the bold name on one header line.
+    expect(content).toMatch(/\[#\]\s+\*\*B3H31D\*\*/);
     // v6: absolute rule against italic — literal quote of the prohibitions.
     expect(content).toContain("ZERO ITALICS");
   });
@@ -163,22 +163,23 @@ describe("installClaudeSlashCommand — versioning", () => {
 
     const content = readFileSync(file, "utf-8");
     expect(content).toContain("[#]");
-    // v8: the mark appears 2 times — once in the template and once in
-    // the CORRECT EXAMPLE. This is the fixed expected count; more or less indicates drift.
+    // v9: the mark appears 4 times — the intro greeting, the b3 template,
+    // the CORRECT EXAMPLE, and the "only the [#] **B3H31D** line" instruction.
+    // Fixed expected count; more or less indicates drift.
     const occurrences = content.split("[#]").length - 1;
-    expect(occurrences).toBe(2);
+    expect(occurrences).toBe(4);
     // Make sure neither old decoration leaked.
     expect(content).not.toContain("─ ( · · · ⊙ · · · ) ─");
     expect(content).not.toContain("-(·⊙·)-");
   });
 
-  test("test_slash_command_content_contains_version_8_frontmatter", async () => {
+  test("test_slash_command_content_contains_version_9_frontmatter", async () => {
     const file = tmpFile("beheld.md");
     await installClaudeSlashCommand(file);
 
     const content = readFileSync(file, "utf-8");
     expect(content.startsWith("---\n")).toBe(true);
-    expect(content).toContain('version: "8"');
+    expect(content).toContain('version: "9"');
   });
 
   test("test_slash_command_content_contains_greeting_instruction", async () => {
@@ -250,7 +251,7 @@ describe("installClaudeSlashCommand — versioning", () => {
     expect(onDisk).toBe(SLASH_COMMAND_CONTENT);
 
     expect(SLASH_COMMAND_CONTENT).toContain(`version: "${SLASH_COMMAND_VERSION}"`);
-    expect(SLASH_COMMAND_CONTENT).toMatch(/^---\nversion: "8"\n---\n/);
+    expect(SLASH_COMMAND_CONTENT).toMatch(/^---\nversion: "9"\n---\n/);
     expect(SLASH_COMMAND_CONTENT).toContain("B3H31D");
     // v8: visual invariant — the [#] brand mark is the decoration
     expect(SLASH_COMMAND_CONTENT).toContain("[#]");

@@ -238,7 +238,7 @@ export function claudeCommandPath(base = homedir()): string {
 /** Bump whenever SLASH_COMMAND_CONTENT changes in a way that should override
  *  previously-installed copies. The installer rewrites any file whose
  *  detectable version is below this value. */
-export const SLASH_COMMAND_VERSION = "8";
+export const SLASH_COMMAND_VERSION = "9";
 
 /**
  * Body of `~/.claude/commands/beheld.md`. Exported so tests can pin it as a
@@ -254,8 +254,9 @@ export const SLASH_COMMAND_VERSION = "8";
  *     ambiguity ("b3 import ..." is conversational, not an import). Stack is
  *     placed before the catch-all view so the keywords don't fall into it.
  *   - b3 mode embeds the literal response template, including the signal
- *     mark `[#]`. v8 replaced the old face decoration `-(·⊙·)-` with the
- *     `[#]` brand mark (the bracket-cursor glyph). v5 removed the markdown
+ *     mark `[#]`. v9 inlines it as `[#] **B3H31D**` (one header line); v8
+ *     replaced the old face decoration `-(·⊙·)-` with the `[#]` brand mark
+ *     (the bracket-cursor glyph). v5 removed the markdown
  *     blockquote (>) prefix because the CLI was rendering blockquote content
  *     in italic; we want upright-only typography (per S1352 — Remove all
  *     italic styling)
@@ -268,7 +269,7 @@ Before any response, introduce yourself with exactly this sentence,
 replacing [name] with the name of the user in this Claude session
 (you have access to that information in the conversation context):
 
-  "My name is B3H31D. I will witness the evolution of [name]'s profile."
+  "[#] My name is B3H31D. I will witness the evolution of [name]'s profile."
 
 Then apply the routing rules below based on: $ARGUMENTS
 
@@ -286,9 +287,7 @@ Rule 1 — Conversational b3 mode:
     answer directly without calling the tool
   → Format the response strictly with this markdown template:
 
-      [#]
-
-      **B3H31D** [3rd-person verb] [observation in 2 to 4 sentences]
+      [#] **B3H31D** [3rd-person verb] [observation in 2 to 4 sentences]
 
   → Voice: third person. The bold **B3H31D** IS the subject of the first
     sentence — the first word right after **B3H31D** is the verb
@@ -297,13 +296,11 @@ Rule 1 — Conversational b3 mode:
     without renaming the subject.
   → Witness: reports what is observed, never judges the dev.
   → No lists, no headers, no code blocks.
-  → No content outside the template above — only the decoration and the paragraph.
+  → No content outside the template above — only the [#] **B3H31D** line and its paragraph.
 
   → CORRECT EXAMPLE (subject once, in bold):
 
-      [#]
-
-      **B3H31D** notices that /beheld has summary, scores, and insight
+      [#] **B3H31D** notices that /beheld has summary, scores, and insight
       variations. Observes the conversational mode via "b3 <question>".
       Understands that each word changes what is witnessed.
 

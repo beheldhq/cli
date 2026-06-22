@@ -41,8 +41,8 @@ const DICT: Record<string, Entry> = {
     "pt-br": "Tente: beheld doctor",
   },
   "install.closer.signoff": {
-    en: "— B3H31D",
-    "pt-br": "— B3H31D",
+    en: "[#] B3H31D",
+    "pt-br": "[#] B3H31D",
   },
 
   // Sections
