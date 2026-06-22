@@ -9,6 +9,7 @@ import { renderProfile } from "../src/ui/profile-view";
 import { detectEnvironments } from "../src/ui/wizard";
 import {
   installClaudeCodeHooks,
+  removeClaudeCodeHooks,
   installContinueDevMcp,
   installClaudeMcpServer,
   removeAllHooks,
@@ -18,6 +19,7 @@ import {
   migrateProjectScopedRegistrations,
   installClaudeSlashCommand,
   selfHealClaudeIntegration,
+  BEHELD_MCP_TOOLS,
 } from "../src/config/hooks";
 import type { ProfileData, Scores, ViewFlags } from "../src/types";
 
@@ -300,6 +302,29 @@ describe("hooks idempotency", () => {
     await installClaudeCodeHooks(settingsFile);
     const cfg = JSON.parse(readFileSync(settingsFile, "utf8"));
     expect(cfg.hooks.SessionStart).toHaveLength(1);
+  });
+
+  test("installClaudeCodeHooks pre-approves beheld's MCP tools (merge, idempotent)", async () => {
+    // Pre-existing unrelated allow rule must survive.
+    writeFileSync(settingsFile, JSON.stringify({ permissions: { allow: ["Read"] } }));
+    await installClaudeCodeHooks(settingsFile);
+    await installClaudeCodeHooks(settingsFile); // idempotent — no duplicates
+    const cfg = JSON.parse(readFileSync(settingsFile, "utf8"));
+    expect(cfg.permissions.allow).toContain("Read"); // existing rule preserved
+    for (const tool of BEHELD_MCP_TOOLS) {
+      expect(cfg.permissions.allow.filter((t: string) => t === tool)).toHaveLength(1);
+    }
+  });
+
+  test("removeClaudeCodeHooks drops beheld MCP tools but keeps other allow rules", async () => {
+    writeFileSync(settingsFile, JSON.stringify({ permissions: { allow: ["Read"] } }));
+    await installClaudeCodeHooks(settingsFile);
+    await removeClaudeCodeHooks(settingsFile);
+    const cfg = JSON.parse(readFileSync(settingsFile, "utf8"));
+    expect(cfg.permissions.allow).toContain("Read");
+    for (const tool of BEHELD_MCP_TOOLS) {
+      expect(cfg.permissions.allow).not.toContain(tool);
+    }
   });
 
   test("installClaudeMcpServer adds beheld to ~/.claude.json with stdio", async () => {

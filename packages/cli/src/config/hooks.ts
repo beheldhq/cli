@@ -108,6 +108,15 @@ function hasBeheldHook(matchers: unknown[]): boolean {
   );
 }
 
+/** beheld's own MCP tools, pre-approved in the user's Claude Code settings
+ *  during install so the first call doesn't trigger a permission prompt.
+ *  Mirrored (added here, removed in removeClaudeCodeHooks). */
+export const BEHELD_MCP_TOOLS = [
+  "mcp__beheld__beheld",
+  "mcp__beheld__beheld_coach",
+  "mcp__beheld__beheld_status",
+];
+
 export async function installClaudeCodeHooks(
   settingsFile = claudeSettingsPath(),
 ): Promise<void> {
@@ -152,6 +161,16 @@ export async function installClaudeCodeHooks(
   }
   cfg.hooks = hooks;
 
+  // Pre-approve beheld's own MCP tools so the user isn't prompted the first
+  // time /beheld, b3, or the coach runs. Merge — never clobber existing rules.
+  const perms = (cfg.permissions ?? {}) as Record<string, unknown>;
+  const allow = Array.isArray(perms.allow) ? (perms.allow as string[]) : [];
+  for (const tool of BEHELD_MCP_TOOLS) {
+    if (!allow.includes(tool)) allow.push(tool);
+  }
+  perms.allow = allow;
+  cfg.permissions = perms;
+
   writeJson(settingsFile, cfg);
 }
 
@@ -183,6 +202,12 @@ export async function removeClaudeCodeHooks(
     if ("beheld" in mcpServers) {
       delete mcpServers["beheld"];
       cfg.mcpServers = mcpServers;
+    }
+    // Drop the pre-approved beheld MCP tool permissions we added on install
+    // (leave any other allow rules the user has untouched).
+    const perms = cfg.permissions as Record<string, unknown> | undefined;
+    if (perms && Array.isArray(perms.allow)) {
+      perms.allow = (perms.allow as string[]).filter((t) => !BEHELD_MCP_TOOLS.includes(t));
     }
     writeJson(settingsFile, cfg);
   } catch {
