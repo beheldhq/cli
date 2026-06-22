@@ -14,11 +14,13 @@
  * Live integration: REKOR_LIVE=1 hits rekor.sigstore.dev. Skipped by
  * default so PRs don't depend on the public log being up.
  */
-import { describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import * as cryptoNode from "node:crypto";
 
 import {
   ed25519HexToPem,
+  fetchRekorEntry,
+  parseRekorResponse,
   rekorEntryUrl,
   rekorSearchUrl,
   submitToRekor,
@@ -287,4 +289,101 @@ const LIVE = process.env.REKOR_LIVE === "1";
     },
     30000,
   );
+});
+
+// ── parseRekorResponse — read-back of a stored entry ─────────────────────────
+
+describe("parseRekorResponse", () => {
+  const UUID = "a".repeat(64);
+
+  test("returns null for null / non-object input", () => {
+    expect(parseRekorResponse(null)).toBeNull();
+    expect(parseRekorResponse(undefined)).toBeNull();
+    expect(parseRekorResponse("string")).toBeNull();
+    expect(parseRekorResponse(42)).toBeNull();
+  });
+
+  test("returns null for an empty object (no entry key)", () => {
+    expect(parseRekorResponse({})).toBeNull();
+  });
+
+  test("returns null when the entry has no resolvable logIndex", () => {
+    expect(parseRekorResponse({ [UUID]: { integratedTime: 1716249600 } })).toBeNull();
+  });
+
+  test("prefers inclusionProof.logIndex over the top-level logIndex", () => {
+    const entry = parseRekorResponse({
+      [UUID]: {
+        logIndex: 111,
+        integratedTime: 1716249600,
+        verification: {
+          inclusionProof: { logIndex: 222 },
+          signedEntryTimestamp: "set==",
+        },
+      },
+    });
+    expect(entry).not.toBeNull();
+    expect(entry!.uuid).toBe(UUID);
+    expect(entry!.logIndex).toBe(222);
+    expect(entry!.signedEntryTimestamp).toBe("set==");
+  });
+
+  test("falls back to the top-level logIndex when no inclusionProof", () => {
+    const entry = parseRekorResponse({ [UUID]: { logIndex: 333, integratedTime: 1716249600 } });
+    expect(entry!.logIndex).toBe(333);
+  });
+
+  test("converts a numeric integratedTime (unix seconds) to ISO", () => {
+    const entry = parseRekorResponse({ [UUID]: { logIndex: 1, integratedTime: 1716249600 } });
+    expect(entry!.integratedTime).toBe("2024-05-21T00:00:00.000Z");
+  });
+
+  test("passes a string integratedTime through unchanged", () => {
+    const entry = parseRekorResponse({
+      [UUID]: { logIndex: 1, integratedTime: "2026-05-21T00:00:00.000Z" },
+    });
+    expect(entry!.integratedTime).toBe("2026-05-21T00:00:00.000Z");
+  });
+
+  test("defaults signedEntryTimestamp to empty string when absent", () => {
+    const entry = parseRekorResponse({ [UUID]: { logIndex: 1, integratedTime: 1716249600 } });
+    expect(entry!.signedEntryTimestamp).toBe("");
+  });
+});
+
+// ── fetchRekorEntry — live read-back over the network ────────────────────────
+
+describe("fetchRekorEntry", () => {
+  const realFetch = globalThis.fetch;
+  // Restore the real fetch after each test — leaving a mock installed is the
+  // exact cross-file pollution the submitToRekor tests above had to skip over.
+  afterEach(() => { globalThis.fetch = realFetch; });
+
+  test("returns the parsed JSON entry on a 200 response", async () => {
+    const payload = { [`u`]: { logIndex: 7 } };
+    let calledUrl = "";
+    globalThis.fetch = mock(async (url: string | URL | Request) => {
+      calledUrl = String(url);
+      return new Response(JSON.stringify(payload), { status: 200 });
+    }) as typeof fetch;
+
+    const result = await fetchRekorEntry("u-7", { baseUrl: "http://rekor.test" });
+    expect(result).toEqual(payload);
+    expect(calledUrl).toBe("http://rekor.test/api/v1/log/entries/u-7");
+  });
+
+  test("returns null on a non-ok response", async () => {
+    globalThis.fetch = mock(async () => new Response("not found", { status: 404 })) as typeof fetch;
+    expect(await fetchRekorEntry("missing", { baseUrl: "http://rekor.test" })).toBeNull();
+  });
+
+  test("returns null when fetch rejects (network down)", async () => {
+    globalThis.fetch = mock(async () => { throw new Error("ECONNREFUSED"); }) as typeof fetch;
+    expect(await fetchRekorEntry("u", { baseUrl: "http://rekor.test" })).toBeNull();
+  });
+
+  test("returns null when the body is not valid JSON", async () => {
+    globalThis.fetch = mock(async () => new Response("<<<not json>>>", { status: 200 })) as typeof fetch;
+    expect(await fetchRekorEntry("u", { baseUrl: "http://rekor.test" })).toBeNull();
+  });
 });

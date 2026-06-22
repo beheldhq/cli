@@ -732,25 +732,57 @@ describe("scoresCurrent offline fallback", () => {
 // ── engineStatus / orphan detection ──────────────────────────────────────────
 
 describe("EngineStatus interface", () => {
-  test("engineStatus() returns null when engine is offline", async () => {
+  const realFetch = globalThis.fetch;
+  afterEach(() => { globalThis.fetch = realFetch; });
+
+  test("engineStatus() returns null when engine is unreachable", async () => {
+    // Simulate the engine being offline by making fetch reject (network/timeout
+    // error). Mocking keeps this deterministic regardless of whether a real
+    // engine happens to be running on 127.0.0.1:7338 on the test machine.
+    globalThis.fetch = mock(async () => { throw new Error("connect ECONNREFUSED"); }) as typeof fetch;
     const { engineStatus } = await import("../src/client/engine-client");
-    // Engine not running in tests — should return null gracefully
     const result = await engineStatus();
     expect(result).toBeNull();
+  });
+
+  test("engineStatus() returns the parsed payload when the engine responds", async () => {
+    const payload = {
+      ok: true,
+      version: "0.0.0-test",
+      sessions_processed: 3,
+      unprocessed_events: 0,
+      last_processed_at: "2026-01-01T00:00:00+00:00",
+    };
+    globalThis.fetch = mock(async () =>
+      new Response(JSON.stringify(payload), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    ) as typeof fetch;
+    const { engineStatus } = await import("../src/client/engine-client");
+    const result = await engineStatus();
+    expect(result).toEqual(payload);
   });
 });
 
 describe("viewCommand orphan detection", () => {
   const repoRoot = join(import.meta.dir, "../../..");
+  // Point the spawned CLI at a port nothing listens on so engineStatus() always
+  // fails — these tests assert the "engine offline" path and must not depend on
+  // a real engine happening to run on 127.0.0.1:7338 on the test machine.
+  const deadEngineUrl = "http://127.0.0.1:19999";
 
-  // Engine offline path: engineStatus() + 4 data calls each have a 3s network
-  // timeout — total wall time ≥ 6s; override Bun's 5s default.
   test("view --refresh prints 'already up to date' when engine is offline (no orphans detected)", async () => {
     // When engine is offline, engineStatus returns null → hasOrphans = false
     // --refresh with no orphans prints "No pending events" message
     const proc = Bun.spawn(
       ["bun", "run", "packages/cli/src/index.ts", "view", "--refresh"],
-      { cwd: repoRoot, stdout: "pipe", stderr: "pipe" },
+      {
+        cwd: repoRoot,
+        env: { ...process.env, BEHELD_ENGINE_URL: deadEngineUrl },
+        stdout: "pipe",
+        stderr: "pipe",
+      },
     );
     const output = await new Response(proc.stdout).text();
     await proc.exited;
@@ -761,7 +793,12 @@ describe("viewCommand orphan detection", () => {
   test("view without --refresh does not mention 'refresh' when engine is offline", async () => {
     const proc = Bun.spawn(
       ["bun", "run", "packages/cli/src/index.ts", "view"],
-      { cwd: repoRoot, stdout: "pipe", stderr: "pipe" },
+      {
+        cwd: repoRoot,
+        env: { ...process.env, BEHELD_ENGINE_URL: deadEngineUrl },
+        stdout: "pipe",
+        stderr: "pipe",
+      },
     );
     const output = await new Response(proc.stdout).text();
     await proc.exited;

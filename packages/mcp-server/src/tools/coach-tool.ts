@@ -1,6 +1,11 @@
 import type { McpTool } from "./types";
 
-const ENGINE_URL = process.env.BEHELD_ENGINE_URL ?? "http://127.0.0.1:7338";
+/** Resolve the engine URL at call time so a `BEHELD_ENGINE_URL` set after this
+ *  module was imported (e.g. by a test's beforeAll) still takes effect. Mirrors
+ *  the call-time pattern in lib/rekor.ts. */
+function engineUrl(): string {
+  return process.env.BEHELD_ENGINE_URL ?? "http://127.0.0.1:7338";
+}
 
 const VALID_HINTS = new Set([
   "feature_work",
@@ -52,7 +57,7 @@ interface CoachPayload {
 async function fetchCoachPayload(hint: string): Promise<CoachPayload | null> {
   try {
     const r = await fetch(
-      `${ENGINE_URL}/coach?session_hint=${encodeURIComponent(hint)}`,
+      `${engineUrl()}/coach?session_hint=${encodeURIComponent(hint)}`,
       { signal: AbortSignal.timeout(3000) },
     );
     if (!r.ok) return null;

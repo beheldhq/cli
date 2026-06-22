@@ -20,6 +20,7 @@ import {
   installAllHarnesses,
   type CaptureFidelity,
   type HarnessAdapter,
+  type InstallAllResult,
 } from "../lib/harness-installer";
 import { ok, warn, arrow, meta, bold, brand, DIM, RESET } from "../ui/styles";
 
@@ -85,6 +86,32 @@ export interface HarnessInstallOptions {
   force?: boolean;
 }
 
+/** Render the status line(s) for a single install result. Pure — the colour
+ *  helpers (`ok`/`warn`/`meta`) are applied here but carry no I/O, so the
+ *  branching (not detected / no-op / manual / changed / already) is unit
+ *  testable without spawning the installer. Returns 1 line normally, 2 when a
+ *  manual-setup note is attached. */
+function installResultLines(r: InstallAllResult): string[] {
+  const tag = `${r.adapter.name.padEnd(18)}`;
+  if (!r.detected) {
+    return [meta(`  · ${tag} (not detected — skipping; use --force to install anyway)`)];
+  }
+  if (!r.installed) {
+    return [meta(`  · ${tag} (no install action)`)];
+  }
+  if (r.installed.requiresManualSetup) {
+    const lines = [warn(`  ! ${tag} manual setup required`)];
+    if (r.installed.note) {
+      lines.push(meta(`    ${r.installed.note.split("\n").join("\n    ")}`));
+    }
+    return lines;
+  }
+  if (r.installed.changed) {
+    return [ok(`  ✓ ${tag} ${r.installed.note ?? "installed"}`)];
+  }
+  return [meta(`  · ${tag} ${r.installed.note ?? "already installed"}`)];
+}
+
 export async function harnessInstallCommand(opts: HarnessInstallOptions = {}): Promise<void> {
   console.log(brand("beheld") + " " + DIM + "harness install" + RESET);
   console.log("");
@@ -95,27 +122,7 @@ export async function harnessInstallCommand(opts: HarnessInstallOptions = {}): P
   });
 
   for (const r of results) {
-    const tag = `${r.adapter.name.padEnd(18)}`;
-    if (!r.detected) {
-      console.log(meta(`  · ${tag} (not detected — skipping; use --force to install anyway)`));
-      continue;
-    }
-    if (!r.installed) {
-      console.log(meta(`  · ${tag} (no install action)`));
-      continue;
-    }
-    if (r.installed.requiresManualSetup) {
-      console.log(warn(`  ! ${tag} manual setup required`));
-      if (r.installed.note) {
-        console.log(meta(`    ${r.installed.note.split("\n").join("\n    ")}`));
-      }
-      continue;
-    }
-    if (r.installed.changed) {
-      console.log(ok(`  ✓ ${tag} ${r.installed.note ?? "installed"}`));
-    } else {
-      console.log(meta(`  · ${tag} ${r.installed.note ?? "already installed"}`));
-    }
+    for (const line of installResultLines(r)) console.log(line);
   }
 
   console.log("");
@@ -129,4 +136,5 @@ export const __test = {
   explanationFor,
   fidelityTag,
   rowFor,
+  installResultLines,
 };

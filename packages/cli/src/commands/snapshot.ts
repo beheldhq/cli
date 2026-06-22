@@ -483,3 +483,13 @@ export async function snapshotListCommand(): Promise<void> {
   }
   console.log("");
 }
+
+/** Pure helpers exposed for unit tests. No I/O — safe to assert against. */
+export const __test = {
+  toHex,
+  stripPrefix,
+  jwkXToHex,
+  rekorFailureLabel,
+  renderRekorLine,
+  bundleFilename,
+};
