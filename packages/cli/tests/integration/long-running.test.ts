@@ -33,6 +33,10 @@ import {
   killSafely,
   type SpawnEnv,
 } from "./helpers";
+// The MCP /health version is the mcp-server's own VERSION — import it so this
+// assertion tracks the constant instead of a hardcoded string that goes stale
+// on every release bump.
+import { VERSION as MCP_VERSION } from "../../../mcp-server/src/version";
 
 const SKIP = process.env.SKIP_INTEGRATION === "1";
 const SUITE = SKIP ? describe.skip : describe;
@@ -166,7 +170,7 @@ SUITE("Long-running scenario — product survives prolonged use and restarts", (
     // What MUST hold is: MCP and engine are reported healthy with the right
     // versions, and the actual listening PIDs are echoed back.
     const doctorOk = runCli(["doctor"], env);
-    expect(doctorOk.stdout).toContain("responding on /health (v0.5.0)");
+    expect(doctorOk.stdout).toContain(`responding on /health (v${MCP_VERSION})`);
     expect(doctorOk.stdout).toContain("v0.0.0-fake");
     expect(doctorOk.stdout).toContain(String(enginePidAfter));
     // No crit-level engine/mcp issues: those are the lines that actually

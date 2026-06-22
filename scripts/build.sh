@@ -14,7 +14,13 @@ mkdir -p dist
 engine_asset="packages/cli/assets/beheld-engine"
 
 if [ -n "${BEHELD_ENGINE_TOKEN:-}" ]; then
-  echo "[build] BEHELD_ENGINE_TOKEN detected — fetching production engine"
+  # Pin the embedded engine to its own latest release (override by exporting
+  # BEHELD_ENGINE_VERSION). The engine versions independently of the CLI — e.g.
+  # CLI 0.5.2 ships engine v0.5.1 because that's the latest engine release.
+  # Keep this in sync with release.yml's BEHELD_ENGINE_VERSION.
+  : "${BEHELD_ENGINE_VERSION:=v0.5.1}"
+  export BEHELD_ENGINE_VERSION
+  echo "[build] BEHELD_ENGINE_TOKEN detected — fetching production engine ${BEHELD_ENGINE_VERSION}"
   sh scripts/fetch-engine.sh
 else
   if [ ! -f "$engine_asset" ]; then
