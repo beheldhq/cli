@@ -22,11 +22,16 @@ jobs:
       - run: bun install --frozen-lockfile
       - name: type-check
         run: bun run lint
-      - name: test
-        run: bun test
+      # Build BEFORE test: engine-extractor.ts does a load-time
+      # `import ... from "../assets/beheld-engine" with { type: "file" }`, so
+      # the asset must exist before `bun test` loads that module (self-heal /
+      # heal-engine specs). build.sh writes the stub-engine placeholder when no
+      # BEHELD_ENGINE_TOKEN is set.
       - name: build (stub engine — no proprietary binary)
         env:
           BEHELD_ENGINE_TOKEN: ""
         run: sh scripts/build.sh
+      - name: test
+        run: bun test
       - name: smoke
         run: ./dist/beheld --version
